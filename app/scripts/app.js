@@ -136,7 +136,8 @@ var angularObj = {
                 event.target.checked = true;
             };
             $scope.corridorWidthInvalid = function () {
-                var v = Number($scope.corridorWidthValue);
+                var input = document.getElementById('corridorWidth');
+                var v = input ? parseFloat(input.value) : NaN;
                 return isNaN(v) || v < 10 || v > 50;
             };
             $scope.applyOptions = function () {
