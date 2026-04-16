@@ -313,6 +313,36 @@
             return lineString.length > 0 &&
                 lineString[0].getElementsByTagName("coordinates").length > 0;
         },
+        // Perpendicular distance from point to line segment (lineStart→lineEnd) in metres.
+        _perpDistanceMeters: function (point, lineStart, lineEnd) {
+            var lonScale = Math.cos(point.lat * Math.PI / 180);
+            var ax = (lineEnd.lon - lineStart.lon) * lonScale;
+            var ay = lineEnd.lat - lineStart.lat;
+            var bx = (point.lon - lineStart.lon) * lonScale;
+            var by = point.lat - lineStart.lat;
+            var segLen2 = ax * ax + ay * ay;
+            if (segLen2 === 0) { return Math.sqrt(bx * bx + by * by) / DEG_PER_METER_LAT; }
+            var t = Math.max(0, Math.min(1, (bx * ax + by * ay) / segLen2));
+            var rx = bx - t * ax, ry = by - t * ay;
+            return Math.sqrt(rx * rx + ry * ry) / DEG_PER_METER_LAT;
+        },
+        // Ramer–Douglas–Peucker polyline simplification.
+        // Removes points that deviate less than epsilonMeters from the simplified line.
+        _simplifyCoords: function (coords, epsilonMeters) {
+            if (coords.length <= 2) { return coords.slice(); }
+            var first = coords[0], last = coords[coords.length - 1];
+            var maxDist = 0, maxIdx = 0, dist, i;
+            for (i = 1; i < coords.length - 1; i++) {
+                dist = this._perpDistanceMeters(coords[i], first, last);
+                if (dist > maxDist) { maxDist = dist; maxIdx = i; }
+            }
+            if (maxDist > epsilonMeters) {
+                var left = this._simplifyCoords(coords.slice(0, maxIdx + 1), epsilonMeters);
+                var right = this._simplifyCoords(coords.slice(maxIdx), epsilonMeters);
+                return left.slice(0, left.length - 1).concat(right);
+            }
+            return [first, last];
+        },
         // Returns perpendicular offset at a line endpoint (from → to defines direction).
         // coords are {lon, lat}; returns {dlon, dlat} in degrees.
         _endCapOffset: function (from, to, bufferMeters) {
@@ -359,9 +389,14 @@
         // Converts an array of {lon, lat} LineString coordinates into a closed corridor polygon.
         // Returns [{x: lon, y: lat}] in the format expected by the MyGeotab Zone API.
         lineStringToCorridorPolygon: function (coords, bufferMeters) {
+            if (coords.length < 2) { return []; }
+            bufferMeters = bufferMeters || this.options.corridorWidth || 100;
+            // Simplify before buffering: removes points within 5 m of the simplified line.
+            // Reduces 800-point Google Maps exports to ~50-100 meaningful waypoints,
+            // producing a much smoother corridor polygon.
+            coords = this._simplifyCoords(coords, 5);
             var n = coords.length, i, offset, leftSide = [], rightSide = [];
             if (n < 2) { return []; }
-            bufferMeters = bufferMeters || this.options.corridorWidth || 100;
             // Start cap — perpendicular from first segment only
             offset = this._endCapOffset(coords[0], coords[1], bufferMeters);
             leftSide.push({ x: coords[0].lon + offset.dlon, y: coords[0].lat + offset.dlat });
