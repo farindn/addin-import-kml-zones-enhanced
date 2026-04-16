@@ -3,11 +3,11 @@
   "supportEmail": "farinnugraha@geotab.com",
   "version": "2.0.0",
   "items": [{
-    "url": "https://addin-enhanced-import-kml-65f7f6.geotabpages.com/importKmlZones.html",
+    "url": "https://farindn.github.io/addin-import-kml-zones-enhanced/importKmlZones.html",
     "path": "ZoneAndMessagesLink/",
     "menuName": {
       "en": "Import KML Zones (Enhanced)"
     },
-    "icon": "https://addin-enhanced-import-kml-65f7f6.geotabpages.com/images/icon.svg"
+    "icon": "https://farindn.github.io/addin-import-kml-zones-enhanced/images/icon.svg"
   }]
 }

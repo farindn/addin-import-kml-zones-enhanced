@@ -1,104 +1,245 @@
-# addin-enhanced-import-kml-zones
+# Import KML Zones (Enhanced)
 
-Enhanced version of the Geotab KML Zone importer with **LineString (route) support** and **Zenith UI design system**.
+A MyGeotab add-in that extends the Geotab SDK's built-in zone importer with support for **Google My Maps route exports** (`<LineString>` KML geometry) and a modernised **Zenith UI**.
 
-## Enhancements (v2.0.0)
+The original `addin-import-kml-zones` only accepts `<Point>` and `<Polygon>` geometry. When users export driving routes from Google My Maps the result is a `<LineString>` — which the original add-in rejects with *"must contain a point or polygon data."* This enhanced version converts LineString routes into **buffered corridor polygon zones**, unlocking workflows like: *"alert me when a vehicle leaves its designated route."*
 
-### 1. LineString/Route Support
-- **Accepts Google My Maps routes** exported as KML `<LineString>` geometry (previously rejected with "must contain point or polygon data")
-- Converts route paths into **buffered corridor polygon zones** using a geometric buffer algorithm
-- Configurable **corridor width** (default 100m per side = 200m total corridor)
-- Miter joins with 4× cap at sharp corners (prevents spikes)
-- Uses equirectangular projection for accurate distance-to-degrees conversion
+---
 
-### 2. Zenith UI Enhancements
-- Modern Geotab design tokens: `zen-button`, `zen-input`, `zen-banner`, `zen-upload-area` classes
-- Improved file upload area with descriptive subtitle and visual feedback
-- Corridor width control in the Options modal
-- Enhanced error and status messaging
+## How It Works
 
-### 3. Use Case: MODA Fleet Notification
-Supports the partner workflow:
-1. Export a driving route from Google My Maps as KML
-2. Import the route as a corridor zone in MyGeotab
-3. Create an Exception Rule: "Vehicle leaves zone" → receive notification
-4. Zone covers the actual route path, not just start/end points
-
-## Installation
-
-### Step 1: Find Your Project ID
-1. Go to `https://git.geotab.com/farinnugraha/addin-enhanced-import-kml/-/settings/general`
-2. Look for **Project ID** near the top (e.g., `12345`)
-3. Copy this ID
-
-### Step 2: Wait for GitLab Pages to Deploy
-1. Go to `https://git.geotab.com/farinnugraha/addin-enhanced-import-kml/-/pipelines`
-2. Wait for the `pages` job to complete (shows green checkmark)
-3. Once done, your add-in will be live at: `https://addin-enhanced-import-kml-65f7f6.geotabpages.com/importKmlZones.html`
-   (Replace `PROJECT_ID` with your actual project ID from Step 1)
-
-### Step 3: Register in MyGeotab
-Go to `my.geotab.com/farindn` → **Administration → System → System Settings → Add-Ins** → **New Add-In**
-
-Paste this configuration (replace `PROJECT_ID` with your actual project ID):
-
-```json
-{
-  "name": "Import KML Zones (Enhanced)",
-  "supportEmail": "farinnugraha@geotab.com",
-  "version": "2.0.0",
-  "items": [{
-    "url": "https://addin-enhanced-import-kml-65f7f6.geotabpages.com/importKmlZones.html",
-    "path": "ZoneAndMessagesLink/",
-    "menuName": {
-      "en": "Import KML Zones (Enhanced)"
-    },
-    "icon": "https://addin-enhanced-import-kml-65f7f6.geotabpages.com/images/icon.svg"
-  }]
-}
+```
+KML file (Google My Maps export or any KML)
+  │
+  ├─ <Point> placemark        → Point zone (circular, configurable radius)
+  ├─ <Polygon> placemark      → Polygon zone (as-is)
+  └─ <LineString> placemark   → Corridor buffer algorithm
+                                    │
+                                    ├─ Parse coordinate sequence
+                                    ├─ Compute perpendicular offsets
+                                    │     end caps  : simple perpendicular at first/last vertex
+                                    │     interior  : miter join (bisector of segment angles)
+                                    │     miter cap : 4× to prevent spikes at sharp corners
+                                    └─ Close polygon (left side forward + right side backward)
+                                          │
+                                          ▼
+                                    Polygon zone (route corridor)
+  │
+  ▼
+MyGeotab API
+  └─ Set (Zone)  →  zone created in the database
 ```
 
-## How It Works (GitLab Pages Deployment)
+The add-in runs entirely in the browser — no server or backend required. All KML parsing and geometry conversion happens client-side using the AngularJS controller and the corridor buffer algorithm in `kml.js`.
 
-The `.gitlab-ci.yml` file automatically:
-1. Runs on every push to the `main` branch
-2. Copies `dist/` files to the `public/` folder
-3. Publishes to GitLab Pages at `https://addin-enhanced-import-kml-65f7f6.geotabpages.com/`
-4. Your add-in is now accessible globally via HTTPS
+---
 
-This approach mirrors Felix's vehicle-availability-addin on git.geotab.com, which uses the same GitLab Pages pattern.
+## Enhancements Over the Original
 
-## Known Issues & Limitations
+| Feature | Original | Enhanced |
+|---|---|---|
+| `<Point>` geometry | Yes | Yes |
+| `<Polygon>` geometry | Yes | Yes |
+| `<LineString>` geometry | No — rejected with error | **Yes — converted to corridor zone** |
+| Corridor width control | — | **Configurable (default 100 m per side)** |
+| UI design system | Legacy Checkmate CSS | **Zenith design tokens** |
+| Upload area subtitle | None | **Descriptive hint text** |
+| Polygon table label | "Polygon Zones" | **"Polygon & Route Corridor Zones"** |
 
-- **First deployment:** GitLab Pages may take 1-2 minutes to deploy after the first push
-- **Private repo:** The repo can remain private; GitLab Pages serves files publicly even from private repos
-- **CI/CD runner:** Requires `prod-docker-docker-autoscaler-runner` (Geotab production runners) to be enabled in project CI/CD settings
+---
 
-## Technical Details
+## Prerequisites
 
-### Buffer Algorithm
-- Converts 2D linestring coordinates to corridor polygon using perpendicular offsets
-- Handles interior vertices with miter joins (bisector of segment angles)
-- End caps use simple perpendicular offset
-- Miter length capped at 4× to prevent spikes at sharp turns
-- Coordinate projection: equirectangular (valid for ~200km routes without significant error)
+- A MyGeotab account with **Zone management** access
+- A `.kml` file — exported from Google My Maps or any mapping tool that supports KML
+- No server infrastructure required
 
-### Files Modified
-- `app/scripts/kml.js` — LineString detection, buffer algorithm, zone parsing
-- `app/scripts/app.js` — Corridor width option scope binding
-- `app/importKmlZones.html` — Zenith CSS, corridor width input, upload area enhancements
-- `app/styles/style.css` — Zenith-aligned styling
-- `dist/` — Production build with bundled scripts and styles
+---
 
-## Test with MODA KML
+## Project Structure
+
 ```
-File: "Directions from Griya Aqaba B13 ... to MODA.kml"
-Contents: 1 LineString (803 coordinates), 2 Points (start/end)
-Expected: 3 zones imported (2 Points, 1 Corridor)
+addin-import-kml-zones-enhanced/
+├── app/                          # Development source files
+│   ├── importKmlZones.html       # Add-in page (development)
+│   ├── config.json               # Add-in manifest
+│   ├── example.kml               # Sample KML for smoke testing
+│   ├── images/icon.svg           # Add-in menu icon
+│   ├── scripts/
+│   │   ├── app.js                # AngularJS controller
+│   │   ├── kml.js                # KML parsing + corridor buffer algorithm
+│   │   ├── utils.js              # Shared utilities (error display, helpers)
+│   │   ├── uploader.js           # Drag-and-drop file handler
+│   │   ├── colorPicker.js        # Zone colour picker widget
+│   │   ├── vanillaSlider.js      # Transparency slider component
+│   │   └── waiting.js            # Loading spinner
+│   └── styles/style.css          # Zenith-aligned custom styles
+├── dist/                         # Production build (served by GitHub Pages)
+│   ├── importKmlZones.html       # Add-in entry point
+│   ├── config.json               # Manifest with absolute GitHub Pages URL
+│   ├── example.kml
+│   ├── images/icon.svg
+│   ├── scripts/
+│   │   ├── main.js               # Concatenated app scripts
+│   │   └── vendor.js             # AngularJS + third-party libraries
+│   └── styles/main.css
+└── .github/
+    └── workflows/pages.yml       # GitHub Pages deployment
 ```
 
 ---
 
-**Contributors:** Farin Nugraha (FNUGR01), Solutions Engineering SEA  
-**Original Source:** [Geotab SDK Samples](https://github.com/Geotab/sdk-addin-samples/tree/master/addin-import-kml-zones)  
-**Deployment Pattern:** GitLab Pages (same as vehicle-availability-addin by Felix Meybugia)
+## Setup: Register in MyGeotab
+
+### Step 1: Copy the add-in manifest
+
+```json
+{
+  "name": "Import KML Zones (Enhanced)",
+  "supportEmail": "your@email.com",
+  "version": "2.0.0",
+  "items": [{
+    "url": "https://farindn.github.io/addin-import-kml-zones-enhanced/importKmlZones.html",
+    "path": "ZoneAndMessagesLink/",
+    "menuName": { "en": "Import KML Zones (Enhanced)" },
+    "icon": "https://farindn.github.io/addin-import-kml-zones-enhanced/images/icon.svg"
+  }]
+}
+```
+
+### Step 2: Register in MyGeotab
+
+1. Go to **Administration → System → System Settings → Add-Ins**
+2. Click **New Add-In**
+3. Paste the manifest above
+4. Click **OK** → **Save**
+
+The add-in appears under **Zones & Messages → Import KML Zones (Enhanced)**.
+
+---
+
+## Usage
+
+### Importing zones from a KML file
+
+1. Open **Import KML Zones (Enhanced)** from the sidebar
+2. Drag and drop a `.kml` file onto the upload area (or click to browse)
+3. *(Optional)* Click **Options** to configure:
+   - **Types** — zone type (Customer, Home, Office, etc.)
+   - **Color** — fill colour for imported zones
+   - **Route Corridor Width** — buffer distance in metres applied to each side of a LineString route (default: 100 m = 200 m total corridor width)
+   - **Indicate stops within zone** — whether stops inside the zone are flagged
+4. Review the parsed zones in the tables:
+   - **Point Zones** — `<Point>` placemarks (e.g., start/end markers)
+   - **Polygon & Route Corridor Zones** — `<Polygon>` shapes and `<LineString>` routes converted to corridor polygons
+5. Select the zones to import and click **Import selected zones**
+
+### Exporting a route from Google My Maps
+
+1. Open your map at [mymaps.google.com](https://mymaps.google.com)
+2. Click the three-dot menu next to your **layer** → **Download KML**
+3. Select **Download as KML** (not `.kmz`)
+4. Upload the downloaded file to this add-in
+
+> Google My Maps exports driving routes as `<LineString>` geometry with one coordinate per route step. This add-in handles that geometry natively.
+
+### Setting up a leave-route notification
+
+After importing a corridor zone:
+
+1. Go to **Rules & Groups → Exception Rules → Add Exception Rule**
+2. Add condition: **Drives outside zone** → select your imported corridor zone
+3. Add notification: email, push notification, or in-app alert
+4. Assign the rule to the relevant vehicles or groups
+5. **Save**
+
+The fleet will now receive alerts whenever a vehicle deviates from the designated route corridor.
+
+---
+
+## Technical Details
+
+### Corridor buffer algorithm
+
+The buffer algorithm converts a sequence of `(lon, lat)` coordinates into a closed polygon:
+
+| Step | Description |
+|---|---|
+| 1. End cap (start) | Perpendicular offset at the first segment, ±`corridorWidth` metres |
+| 2. Interior miter | At each interior vertex, bisect the two adjacent segments; scale offset by `1 / cos(θ/2)` |
+| 3. Miter cap | Cap miter scale at 4× to limit spike height at sharp corners |
+| 4. End cap (end) | Perpendicular offset at the last segment |
+| 5. Close polygon | Left side (forward) + right side (reversed) + closing point |
+
+**Coordinate conversion** uses the equirectangular approximation:
+
+```
+DEG_PER_METER_LAT = 1 / (π/180 × 6,371,000)   ≈ 8.9932×10⁻⁶ °/m
+DEG_PER_METER_LON = DEG_PER_METER_LAT / cos(lat)
+```
+
+This is accurate to within 0.1% for routes up to ~200 km.
+
+### Supported KML geometry
+
+| Geometry tag | Behaviour |
+|---|---|
+| `<Point>` | Circular zone centred at the point coordinate |
+| `<Polygon>` | Polygon zone using the `<outerBoundaryIs>` ring |
+| `<LineString>` | Corridor polygon via buffer algorithm |
+| `<MultiGeometry>` | Decomposed into individual geometries (each handled above) |
+
+### Build
+
+No build toolchain required. `dist/scripts/main.js` is a plain concatenation of `app/scripts/` in this order:
+
+```
+app.js → kml.js → vanillaSlider.js → utils.js → colorPicker.js → uploader.js → waiting.js
+```
+
+To rebuild after modifying `app/scripts/`:
+
+```bash
+cat app/scripts/app.js \
+    app/scripts/kml.js \
+    app/scripts/vanillaSlider.js \
+    app/scripts/utils.js \
+    app/scripts/colorPicker.js \
+    app/scripts/uploader.js \
+    app/scripts/waiting.js \
+    > dist/scripts/main.js
+```
+
+---
+
+## GitHub Pages Deployment
+
+Every push to `main` triggers the GitHub Actions workflow at `.github/workflows/pages.yml`, which publishes the `dist/` folder to GitHub Pages.
+
+**Hosted at:** `https://farindn.github.io/addin-import-kml-zones-enhanced/`
+
+To deploy your own fork:
+
+1. Fork this repository
+2. Go to **Settings → Pages → Source** → select **GitHub Actions**
+3. Update the `url` and `icon` fields in `dist/config.json` to your own Pages URL
+4. Push to `main` — the workflow runs automatically
+
+---
+
+## Known Limitations
+
+- **Equirectangular projection** — accurate for routes up to ~200 km; error increases for very long routes spanning multiple degrees of latitude.
+- **Extreme hairpin turns** — the 4× miter cap limits spike height but does not resolve polygon self-intersections at U-turns. Visually distorted polygons may result for very sharp angles.
+- **Altitude ignored** — `<LineString>` coordinates with a third (altitude) component are supported; the altitude value is silently ignored.
+- **No KML styling** — colour, icon, and style definitions inside the KML file are not read; zone colour is set via the Options panel.
+- **AngularJS 1.x** — inherited from the original Geotab SDK sample. The add-in is not compatible with React or Vue frameworks without a full rewrite.
+- **Single file upload per session** — uploading a second file replaces the first. Use **Clear** between uploads if needed.
+
+---
+
+## Credits
+
+- Based on the original [addin-import-kml-zones](https://github.com/Geotab/sdk-addin-samples/tree/master/addin-import-kml-zones) from the Geotab SDK samples
+- LineString corridor support and Zenith UI enhancements by Farin Nugraha, Solutions Engineering SEA, Geotab
+- Zenith design tokens: [@geotab/zenith](https://www.npmjs.com/package/@geotab/zenith)
