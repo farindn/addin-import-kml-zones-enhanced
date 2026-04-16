@@ -34,7 +34,7 @@ Supports the partner workflow:
 ### Step 2: Wait for GitLab Pages to Deploy
 1. Go to `https://git.geotab.com/farinnugraha/addin-enhanced-import-kml/-/pipelines`
 2. Wait for the `pages` job to complete (shows green checkmark)
-3. Once done, your add-in will be live at: `https://PROJECT_ID.geotabpages.com/importKmlZones.html`
+3. Once done, your add-in will be live at: `https://addin-enhanced-import-kml-65f7f6.geotabpages.com/importKmlZones.html`
    (Replace `PROJECT_ID` with your actual project ID from Step 1)
 
 ### Step 3: Register in MyGeotab
@@ -48,12 +48,12 @@ Paste this configuration (replace `PROJECT_ID` with your actual project ID):
   "supportEmail": "farinnugraha@geotab.com",
   "version": "2.0.0",
   "items": [{
-    "url": "https://PROJECT_ID.geotabpages.com/importKmlZones.html",
+    "url": "https://addin-enhanced-import-kml-65f7f6.geotabpages.com/importKmlZones.html",
     "path": "ZoneAndMessagesLink/",
     "menuName": {
       "en": "Import KML Zones (Enhanced)"
     },
-    "icon": "https://PROJECT_ID.geotabpages.com/images/icon.svg"
+    "icon": "https://addin-enhanced-import-kml-65f7f6.geotabpages.com/images/icon.svg"
   }]
 }
 ```
@@ -63,7 +63,7 @@ Paste this configuration (replace `PROJECT_ID` with your actual project ID):
 The `.gitlab-ci.yml` file automatically:
 1. Runs on every push to the `main` branch
 2. Copies `dist/` files to the `public/` folder
-3. Publishes to GitLab Pages at `https://PROJECT_ID.geotabpages.com/`
+3. Publishes to GitLab Pages at `https://addin-enhanced-import-kml-65f7f6.geotabpages.com/`
 4. Your add-in is now accessible globally via HTTPS
 
 This approach mirrors Felix's vehicle-availability-addin on git.geotab.com, which uses the same GitLab Pages pattern.
