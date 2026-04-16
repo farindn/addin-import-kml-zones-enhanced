@@ -283,6 +283,15 @@ body, input, select, textarea, button {
   font-weight: 700;
   color: var(--color-text);
   padding: 20px 0 8px;
+  /*
+    sticky + left:0 pins the title to the left edge of the scroll viewport.
+    As the table scrolls right, the ::before stays at left:0 — never moves.
+    background is required to cover table columns scrolling behind it.
+  */
+  position: sticky;
+  left: 0;
+  background: var(--color-bg);
+  z-index: 2;
 }
 #polygonList::before { content: "Polygon \26  Route Corridor Zones"; }
 #pointList::before   { content: "Point Zones"; }
@@ -804,14 +813,14 @@ button.geotabButton.emptyButton {
   */
   .ng-modal-dialog {
     top: auto;
-    bottom: 0;
+    bottom: 60px;  /* clear MyGeotab's ~60px app-level bottom nav bar */
     left: 0;
     right: 0;
     transform: none;
     width: 100%;
     border-radius: 16px 16px 0 0;
     padding: var(--sp-5) var(--sp-4) calc(var(--sp-6) + env(safe-area-inset-bottom, 0px));
-    max-height: 72vh;   /* ~60px nav bar + ~8vh buffer keeps content fully visible */
+    max-height: calc(80vh - 60px);
     overflow-x: hidden;
     overflow-y: auto;
   }
