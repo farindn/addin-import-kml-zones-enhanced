@@ -33,7 +33,7 @@ var angularObj = {
                     show: "="  // two-way binding on modalShown from parent
                 },
                 replace: true,
-                transclude: true // modal content comes from parent scope
+                transclude: true, // modal content comes from parent scope
                 link: function (scope, element, attrs) {
                     scope.dialogStyle = {};
                     if (attrs.width) {
