@@ -91,6 +91,11 @@ body, input, select, textarea, button {
   color: var(--color-text);
   margin: 0;
 }
+.kml-page-version {
+  font-size: 11px;
+  color: var(--color-text-placeholder);
+  margin: 2px 0 0;
+}
 
 /* ── Buttons ────────────────────────────────────────────────── */
 .kml-btn {
