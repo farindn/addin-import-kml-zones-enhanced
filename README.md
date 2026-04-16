@@ -101,7 +101,6 @@ addin-import-kml-zones-enhanced/
   "isSigned": false,
   "items": [{
     "url": "https://farindn.github.io/addin-import-kml-zones-enhanced/importKmlZones.html",
-    "path": "ZoneAndMessagesLink/",
     "category": "ZonesId",
     "menuName": { "en": "Import KML Zones" },
     "icon": "https://farindn.github.io/addin-import-kml-zones-enhanced/images/icon.svg"
