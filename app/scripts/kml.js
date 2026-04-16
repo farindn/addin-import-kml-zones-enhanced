@@ -44,7 +44,7 @@
                         this.args[element.id] = element;
                     }
                 });
-            this.colorPicker = new ColorPicker();
+            this.colorPicker = ColorPicker();
             this.colorPickerObj = this.colorPicker.formColorPicker();
             this.zoneCreator = this.zoneShapeCreator();
             this.options = {
