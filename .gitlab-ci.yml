@@ -1,5 +1,7 @@
 pages:
   stage: deploy
+  tags:
+    - prod-gke-runner
   image: alpine:latest
   script:
     - mkdir -p public
