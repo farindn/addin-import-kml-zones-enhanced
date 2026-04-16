@@ -236,6 +236,7 @@ var angularObj = {
             this.api = api;
             this.state = state;
             this.args.container = document.getElementById("importKmlZones");
+            this.args.container.classList.remove("hidden");
             this.local = this.setupLocal(this.localInit);
             this.filter = state.getGroupFilter();
             this.utils = new Utils();
