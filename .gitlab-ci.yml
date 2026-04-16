@@ -1,5 +1,8 @@
 pages:
   stage: deploy
+  tags:
+    - prod-docker-docker-autoscaler-runner
+  image: alpine:latest
   script:
     - mkdir -p public
     - cp -r dist/. public/
@@ -7,4 +10,4 @@ pages:
     paths:
       - public
   only:
-    - main
+    - master
