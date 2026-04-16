@@ -818,14 +818,15 @@ button.geotabButton.emptyButton {
   */
   .ng-modal-dialog {
     top: auto;
-    bottom: 60px;  /* clear MyGeotab's ~60px app-level bottom nav bar */
+    bottom: 0;
     left: 0;
     right: 0;
     transform: none;
     width: 100%;
     border-radius: 16px 16px 0 0;
-    padding: var(--sp-5) var(--sp-4) calc(var(--sp-6) + env(safe-area-inset-bottom, 0px));
-    max-height: calc(80vh - 60px);
+    /* top/side padding normal; bottom padding clears MyGeotab ~60px nav bar */
+    padding: var(--sp-5) var(--sp-4) calc(60px + env(safe-area-inset-bottom, 0px));
+    max-height: 80vh;
     overflow-x: hidden;
     overflow-y: auto;
   }
