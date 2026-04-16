@@ -266,22 +266,39 @@ body, input, select, textarea, button {
   border-bottom: 2px solid var(--color-border);
   white-space: nowrap;
 }
-/* Fix #3: Section header — bold, left-aligned, stays pinned during horizontal scroll */
-.checkmateListTable thead th[colspan] {
+/*
+  Section labels ("Polygon & Route Corridor Zones", "Point Zones").
+  Root cause of centering+scrolling: the title was a <th colspan="4"> INSIDE the
+  scrollable <table> — so it always centered and scrolled horizontally.
+
+  Fix: Show the visual title via CSS ::before on #polygonList / #pointList divs
+  (these are outside the table's scroll container, auto-hide with the div).
+  The <th colspan> row remains in the DOM (height 0, invisible) so that
+  clearDataTables still counts it as trs[0] — preserving the trs.length > 2 check.
+*/
+#polygonList::before,
+#pointList::before {
+  display: block;
   font-size: 15px;
   font-weight: 700;
-  letter-spacing: 0;
-  text-transform: none;
-  text-align: left;         /* prevent browser default center-align on th */
   color: var(--color-text);
-  background: var(--color-bg);
-  border-bottom: none;
-  border-top: none;
-  padding: 24px 0 8px;
-  /* Pin to left edge when table scrolls horizontally */
-  position: sticky;
-  left: 0;
-  z-index: 1;
+  padding: 20px 0 8px;
+}
+#polygonList::before { content: "Polygon \26  Route Corridor Zones"; }
+#pointList::before   { content: "Point Zones"; }
+
+/* Make the in-table <th colspan> row invisible but keep it in the DOM */
+.checkmateListTable thead tr:first-child {
+  visibility: hidden;
+  height: 0;
+  line-height: 0;
+}
+.checkmateListTable thead tr:first-child th {
+  padding: 0;
+  border: none;
+  height: 0;
+  font-size: 0;
+  line-height: 0;
 }
 /*
   Fix #4: REMOVED the old tbody tr:first-child td gray rule.
@@ -294,22 +311,20 @@ body, input, select, textarea, button {
   border-bottom: 1px solid var(--color-border);
   vertical-align: middle;
 }
-/* Zebra striping — Material Design banded rows */
+/* Zebra striping — specificity: (0,2,3) */
 .checkmateListTable tbody tr:nth-child(odd) td  { background: var(--color-bg); }
 .checkmateListTable tbody tr:nth-child(even) td { background: var(--color-surface-light); }
-/* Hover overrides stripes (but not imported/error state rows) */
+/* Hover overrides stripes (skips imported/error rows) */
 .checkmateListTable tbody tr:not(.imported):not(.error):hover td {
   background: var(--color-hover);
 }
-/* Row states set dynamically by kml.js */
-.checkmateListTable .imported td,
-.checkmateListTable tr.imported td {
-  background: var(--color-success-bg);
-}
-.checkmateListTable .error td,
-.checkmateListTable tr.error td {
-  background: var(--color-error-bg);
-}
+/*
+  Row states set dynamically by kml.js (markRowSuccess / markRowError).
+  MUST come AFTER nth-child rules AND use specificity (0,2,3) to override them.
+  Old selectors (.checkmateListTable .imported td) had specificity (0,2,1) and lost.
+*/
+.checkmateListTable tbody tr.imported td { background: var(--color-success-bg); }
+.checkmateListTable tbody tr.error td   { background: var(--color-error-bg); }
 /* Color swatch cell — set via JS as class="colorDiv" */
 .colorDiv {
   width: 100%;
@@ -762,23 +777,16 @@ input[type="color"]::-webkit-color-swatch { border: none; }
   Original iconSearch::before referenced img/search.png which no longer exists.
   Solution: reset button appearance + replace broken image with a "↗" text icon.
 */
+/*
+  kml.js markRowSuccess appends a <button class="geotabButton emptyButton"> to the
+  name cell. User wants ONLY the row background color to change (green/red) with no
+  icon. Hide the button entirely — the row color change is the only visual feedback.
+*/
 button.geotabButton.emptyButton {
-  appearance: none;
-  -webkit-appearance: none;
-  border: none;
-  background: transparent;
-  padding: 0 2px;
-  margin: 0;
-  cursor: pointer;
-  vertical-align: middle;
-  line-height: 1;
+  display: none;
 }
 .geotabButtonIcons.iconSearch::before {
-  content: "↗";
-  font-size: 11px;
-  color: var(--color-primary);
-  font-style: normal;
-  font-weight: 600;
+  content: none;
 }
 
 /* ── Responsive: Mobile bottom sheet for modal ────────────── */
@@ -788,7 +796,12 @@ button.geotabButton.emptyButton {
     padding: 14px 16px;
   }
 
-  /* Bottom sheet: slide from bottom, rounded top corners only */
+  /*
+    Bottom sheet: slide from bottom, rounded top corners only.
+    MyGeotab mobile app has a ~60px bottom nav bar (Dashboard / Map / Assets / More)
+    that is NOT covered by env(safe-area-inset-bottom) — it's app-level, not system.
+    Reduce max-height and add explicit bottom padding so modal content clears the nav.
+  */
   .ng-modal-dialog {
     top: auto;
     bottom: 0;
@@ -797,9 +810,10 @@ button.geotabButton.emptyButton {
     transform: none;
     width: 100%;
     border-radius: 16px 16px 0 0;
-    padding: var(--sp-5) var(--sp-4) calc(var(--sp-5) + env(safe-area-inset-bottom, 0px));
-    max-height: 85vh;
+    padding: var(--sp-5) var(--sp-4) calc(var(--sp-6) + env(safe-area-inset-bottom, 0px));
+    max-height: 72vh;   /* ~60px nav bar + ~8vh buffer keeps content fully visible */
     overflow-x: hidden;
+    overflow-y: auto;
   }
 
   /* Compact upload area on mobile */
