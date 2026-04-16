@@ -430,9 +430,19 @@ body, input, select, textarea, button {
 */
 .ng-modal-overlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 9999;
   background: rgba(0, 0, 0, 0.36);
+}
+
+@media (max-width: 480px) {
+  /* On mobile, stop the scrim above the navbar so it stays fully visible */
+  .ng-modal-overlay {
+    bottom: 50px;
+  }
 }
 .ng-modal-dialog {
   position: fixed;
@@ -820,16 +830,18 @@ button.geotabButton.emptyButton {
   */
   .ng-modal-dialog {
     top: auto;
-    bottom: 60px;  /* sit flush above the ~60px MyGeotab bottom navbar */
+    bottom: 50px;  /* sit flush above the ~50px MyGeotab bottom navbar */
     left: 0;
     right: 0;
     transform: none;
     width: 100%;
     border-radius: 16px 16px 0 0;
     padding: var(--sp-5) var(--sp-4) 0;
-    max-height: calc(72vh - 60px);
+    max-height: calc(72vh - 50px);
     overflow-x: hidden;
     overflow-y: auto;
+    /* top-only shadow: bottom sheet rises from bottom, no shadow cast on navbar */
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
   }
 
   /* Sticky Apply/Set-defaults bar — always visible at the sheet bottom */
