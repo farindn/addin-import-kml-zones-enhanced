@@ -135,7 +135,12 @@ var angularObj = {
                 }
                 event.target.checked = true;
             };
+            $scope.corridorWidthInvalid = function () {
+                var v = Number($scope.corridorWidthValue);
+                return isNaN(v) || v < 10 || v > 50;
+            };
             $scope.applyOptions = function () {
+                if ($scope.corridorWidthInvalid()) { return; }
                 kml.applyOptions();
                 container.style.overflow = "";
                 container.style.height = "auto";
@@ -215,7 +220,7 @@ var angularObj = {
         childCallback: {},
         minDate: new Date(Date.UTC(1986, 0, 1)),
         defaultZoneSize: 200,
-        defaultCorridorWidth: 100, // meters — buffer on each side of a LineString route
+        defaultCorridorWidth: 15, // meters — buffer on each side of a LineString route
         localInit: ["addressLookup", "Address Lookup", "customer", "Customer", "office", "Office", "home", "Home"],
         isFormDataSupported: !!window.FormData,
         fileReader: null,
@@ -1589,10 +1594,10 @@ var angularObj = {
         let quickColorsBox = null,
             transparencyControl = null,
             colorToInitWith = null,
-            defaultColor = [255, 69, 0, 38],
-            defaultColorHex = "#FF4500",
-            arrDefaultColorRGBA = { r: 255, g: 69, b: 0, a: 38 },
-            defaultTransparencyValue = 85,
+            defaultColor = [0, 128, 0, 64],
+            defaultColorHex = "#008000",
+            arrDefaultColorRGBA = { r: 0, g: 128, b: 0, a: 64 },
+            defaultTransparencyValue = 75,
             picker = null,
             setVariables = () => {
                 quickColorsBox = kml.args.container.querySelector("#colorPicker").querySelectorAll(".quickColorsBox");

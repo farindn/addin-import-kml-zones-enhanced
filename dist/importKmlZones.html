@@ -87,10 +87,11 @@
               <input type="number"
                      id="corridorWidth"
                      class="checkmateFormEditField"
-                     min="10" max="5000" step="10"
+                     min="10" max="50" step="5"
                      ng-model="corridorWidthValue"
                      title="Buffer on each side of the route in meters. Default: 100 m = 200 m total corridor width."/>
               <small class="zen-text--secondary">Applies to LineString (route) geometries only.</small>
+              <span class="kml-field-error" ng-show="corridorWidthInvalid()">Enter a value between 10 and 50.</span>
             </div>
           </li>
           <li class="geotabOptionsMenuElement">
@@ -107,7 +108,7 @@
             </div>
           </li>
           <li class="geotabOptionsMenuElement">
-            <button class="kml-btn kml-btn--primary" ng-click="applyOptions()">Apply</button>
+            <button class="kml-btn kml-btn--primary" ng-click="applyOptions()" ng-disabled="corridorWidthInvalid()">Apply</button>
             <button class="kml-btn kml-btn--text" ng-click="setDefaultOptions()">Set defaults</button>
           </li>
         </ul>

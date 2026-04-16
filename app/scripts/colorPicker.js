@@ -4,10 +4,10 @@
         let quickColorsBox = null,
             transparencyControl = null,
             colorToInitWith = null,
-            defaultColor = [255, 69, 0, 38],
-            defaultColorHex = "#FF4500",
-            arrDefaultColorRGBA = { r: 255, g: 69, b: 0, a: 38 },
-            defaultTransparencyValue = 85,
+            defaultColor = [0, 128, 0, 64],
+            defaultColorHex = "#008000",
+            arrDefaultColorRGBA = { r: 0, g: 128, b: 0, a: 64 },
+            defaultTransparencyValue = 75,
             picker = null,
             setVariables = () => {
                 quickColorsBox = kml.args.container.querySelector("#colorPicker").querySelectorAll(".quickColorsBox");

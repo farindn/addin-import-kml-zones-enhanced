@@ -9,7 +9,7 @@
         childCallback: {},
         minDate: new Date(Date.UTC(1986, 0, 1)),
         defaultZoneSize: 200,
-        defaultCorridorWidth: 100, // meters — buffer on each side of a LineString route
+        defaultCorridorWidth: 15, // meters — buffer on each side of a LineString route
         localInit: ["addressLookup", "Address Lookup", "customer", "Customer", "office", "Office", "home", "Home"],
         isFormDataSupported: !!window.FormData,
         fileReader: null,

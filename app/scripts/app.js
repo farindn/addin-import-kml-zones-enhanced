@@ -135,7 +135,12 @@ var angularObj = {
                 }
                 event.target.checked = true;
             };
+            $scope.corridorWidthInvalid = function () {
+                var v = Number($scope.corridorWidthValue);
+                return isNaN(v) || v < 10 || v > 50;
+            };
             $scope.applyOptions = function () {
+                if ($scope.corridorWidthInvalid()) { return; }
                 kml.applyOptions();
                 container.style.overflow = "";
                 container.style.height = "auto";
