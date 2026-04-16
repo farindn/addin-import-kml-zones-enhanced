@@ -45,29 +45,24 @@
 
   <div id="importKmlZones" class="hidden">
 
-    <div id="disclaimer">
-        <label id="disclaimerLabel">Sample add-in/tool</label>
-        <p>This tool is provided as an example and is available on an As-Is basis. You must assume all the risks and
-            costs associated with the use of the sample tool, including, without limitation, any damage to any
-            equipment, software, information or data. In addition, we are not obligated to provide any maintenance,
-            technical or other support for the sample tool. In order to improve our products, we may at any time,
-            and without warning, change the design, presentation, or functionality of the software.</p>
+    <div class="zen-alert zen-alert--info kml-disclaimer" role="alert">
+        <strong>Sample add-in/tool</strong> — Provided as-is. No maintenance or support obligations.
     </div>
     
-    <div class="checkmatePageHeader">
-      <h1 class="checkmatePageName">Import KML Zones</h1>
-  </div>
+    <div class="kml-page-header">
+        <h1 class="kml-page-title">Import KML Zones</h1>
+    </div>
 
   <div ng-controller="optionsController" id="optionsControllerElement" style="margin-top: 20px;">
-      <button ng-click="toggleModal()" class="geo-button zen-button">Options</button>
-      <button ng-click="clear()" class="geo-button zen-button">Clear</button>
+      <button ng-click="toggleModal()" class="zen-button zen-button--secondary">Options</button>
+      <button ng-click="clear()" class="zen-button zen-button--tertiary">Clear</button>
       <modal-dialog show="modalShown">
           <ul class="geotabOptionsMenuElements">
               <li class="geotabOptionsMenuElement">
                   <label for="typesSelect">Types</label>
 
                   <div class="geotabOptionsMenuElementValue">
-                      <select id="typesSelect" class="ng-modal-dialog-elem checkmateFormEditField" ng-model="zoneTypeSelect"
+                      <select id="typesSelect" class="zen-input ng-modal-dialog-elem" ng-model="zoneTypeSelect"
                               ng-options="option.name for option in zoneTypeOptions track by option.id" multiple="true"
                               ng-mousedown="selectType($event)">
                       </select>
@@ -95,10 +90,10 @@
                               <div class="transparencyButtonSet horizontalButtonSet" style="display: none;">
                                   <input type="radio" id="colorPicker_DisplayedFalseId" class="geotabSwitchButton"
                                          name="asd"/>
-                                  <label for="colorPicker_DisplayedFalseId" class="geo-button">Not visible</label>
+                                  <label for="colorPicker_DisplayedFalseId" class="zen-button">Not visible</label>
                                   <input type="radio" id="colorPicker_DisplayedTrueId" class="geotabSwitchButton"
                                          name="asd"/>
-                                  <label for="colorPicker_DisplayedTrueId" class="geo-button">Visible</label>
+                                  <label for="colorPicker_DisplayedTrueId" class="zen-button">Visible</label>
                               </div>
                           </div>
                       </div>
@@ -123,24 +118,24 @@
                       <span class="horizontalButtonSet">
                           <input type="checkbox" id="stoppedInsideZones" checked="checked" class="geotabSwitchButton"
                                  ng-click="changeZoneStop($event)"/>
-                          <label class="geo-button" for="stoppedInsideZones">Yes</label>
+                          <label class="zen-button" for="stoppedInsideZones">Yes</label>
                           <input type="checkbox" id="stoppedInsideZonesNo" class="geotabSwitchButton"
                                  ng-click="changeZoneStop($event)"/>
-                          <label class="geo-button" for="stoppedInsideZonesNo">No</label>
+                          <label class="zen-button" for="stoppedInsideZonesNo">No</label>
                       </span>
                   </div>
               </li>
               <li class="geotabOptionsMenuElement">
-                  <button class="geo-button geo-button--action zen-button zen-button--primary" ng-click="applyOptions()">Apply</button>
-                  <button class="geo-button zen-button" ng-click="setDefaultOptions()">Set defaults</button>
+                  <button class="zen-button zen-button--primary" ng-click="applyOptions()">Apply</button>
+                  <button class="zen-button zen-button--tertiary" ng-click="setDefaultOptions()">Set defaults</button>
               </li>
           </ul>
       </modal-dialog>
   </div>
 
   <div id="imporKMLZonesFormContainer" class="extern" style="margin-top: 20px;" ng-controller='parsedDataController'>
-      <div class="zen-upload-area dragAndDropUploader uploaderElementsContainer">
-          <span class="zen-upload-area__title dragAndDropTitle">{{uploaderTitle}}</span>
+      <div class="zen-upload-area kml-upload-area uploaderElementsContainer">
+          <span class="zen-upload-area__title">{{uploaderTitle}}</span>
           <span class="zen-upload-area__subtitle">Accepts .kml from Google My Maps — including route (LineString) exports</span>
           <input class="uploadFileElement" type="file" multiple="true" ng-model="upload"
                  onchange="angular.element(this).scope().uploadFiles(event)" onclick="this.value = null;">
@@ -155,16 +150,12 @@
               <progress max="100" value="0" id="importProgress"></progress>
           </div>
           <div class="importToolbar" style="width: 100%; padding: 10px 0 0 0; text-align: right;">
-              <button class="geo-button zen-button" ng-click="exportKML()" id="exportKML" style="display: none;">Save not
-                  imported zones to kml file
-              </button>
+              <button class="zen-button zen-button--tertiary" ng-click="exportKML()" id="exportKML" style="display: none;">Save not imported zones to kml file</button>
               <input type="checkbox" class="geotabSwitchButton" id="hideImported" ng-click="hideImported($event)">
-              <label class="geo-button zen-button" for="hideImported" id="hideImportedLabel" style="display: none;">Hide imported</label>
-              <button class="geo-button geo-button--action zen-button zen-button--primary" ng-click="importSelectedZones()" id="importButton"
-                      style="display: none;">Import selected zones
-              </button>
+              <label class="zen-button" for="hideImported" id="hideImportedLabel" style="display: none;">Hide imported</label>
+              <button class="zen-button zen-button--primary" ng-click="importSelectedZones()" id="importButton" style="display: none;">Import selected zones</button>
               <input type="checkbox" class="geotabSwitchButton" id="selectAll" ng-click="selectAll($event)">
-              <label class="geo-button zen-button" for="selectAll" id="selectAllLabel" style="display: none;">Select all</label>
+              <label class="zen-button" for="selectAll" id="selectAllLabel" style="display: none;">Select all</label>
           </div>
           <div id="polygonList" style="display: none;">
               <table class="checkmateListTable">

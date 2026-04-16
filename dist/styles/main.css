@@ -6,20 +6,23 @@
     width: 100%;
     height: 100%;
     background-color: #000000;
-    opacity: 0.8;
+    opacity: 0.5;
 }
 
 .ng-modal-dialog {
     z-index: 10000;
     position: absolute;
-    width: 450px;
-    height: 300px;
+    width: min(90vw, 520px);
+    max-height: 80vh;
+    overflow-y: auto;
     top: 50%;
     left: 50%;
-    margin-left: -225px;
-    margin-top: -150px;
+    transform: translate(-50%, -50%);
+    margin: 0;
     background-color: #fff;
-    padding: 15px 25px 50px 25px;
+    padding: 15px 25px 24px 25px;
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
 }
 
 .ng-modal-dialog-content {
@@ -47,14 +50,26 @@
 
 .ng-modal-close {
     position: absolute;
-    top: 3px;
-    right: 5px;
-    padding: 5px;
+    top: 8px;
+    right: 10px;
+    padding: 0;
     cursor: pointer;
-    font-size: 120%;
-    display: inline-block;
-    font-weight: bold;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    font-size: 16px;
     font-family: 'arial', 'sans-serif';
+    color: var(--text-secondary, #6b7c93);
+    border: none;
+    background: transparent;
+    line-height: 1;
+}
+.ng-modal-close:hover {
+    background: var(--backgrounds-subtle, #f0f4f8);
+    color: var(--text-primary, #1f2833);
 }
 
 .ng-modal-dialog-elem {
@@ -214,28 +229,8 @@ input[type="range"].vanillaSlider::-ms-track {
 }
 
 .dragAndDropUploader {
-    width: auto;
-    padding: 0 50px;
-    height: 100px;
-    border: 2px dashed #c5dbec;
-    -webkit-border-radius: 5px;
-    -moz-border-radius: 5px;
-    border-radius: 5px;
-    display: table;
     cursor: pointer;
-}
-
-.dragAndDropUploader.hoverArea {
-    background-color: #ebebeb;
-}
-
-.dragAndDropUploader > .dragAndDropTitle {
-    font-size: 25px;
-    font-weight: 900;
-    color: #888;
-    display: table-cell;
-    text-align: center;
-    vertical-align: middle;
+    position: relative;
 }
 
 .uploadFileElement {
@@ -259,13 +254,13 @@ input[type="range"].vanillaSlider::-ms-track {
 }
 
 .checkmateListTable th {
-    background-color: #e8f3fd;
-    color: #25477b;
+    background-color: var(--backgrounds-subtle, #f0f4f8);
+    color: var(--text-primary, #1f2833);
 }
 
 .checkmateListTable tr:first-child td {
-    font-weight: bold;
-    color: #25477b;
+    font-weight: 600;
+    color: var(--text-primary, #1f2833);
 }
 
 .center {
@@ -286,12 +281,7 @@ input[type="range"].vanillaSlider::-ms-track {
 }
 
 .errorMessage {
-    border: 1px solid red;
-    background-color: #ffaaaa;
-    width: auto;
     margin: 20px 0;
-    padding: 10px;
-    display: table;
 }
 
 #pointList,
@@ -325,51 +315,26 @@ input[type="range"].vanillaSlider::-ms-track {
     z-index: 100;
 }
 
-#progressContainer progress[value]::-moz-progress-bar {
-    background-image:
-    -moz-linear-gradient(
-            135deg,
-            transparent 33%,
-            rgba(0, 0, 0, 0.1) 33%,
-            rgba(0, 0, 0, 0.1) 66%,
-            transparent 66%
-    ),
-    -moz-linear-gradient(
-            top,
-            rgba(255, 255, 255, 0.25),
-            rgba(0, 0, 0, 0.25)
-    ),
-    -moz-linear-gradient(
-            left,
-            #09c,
-            #f44
-    );
-
-    border-radius: 2px;
-    background-size: 35px 25px, 100% 100%, 100% 100%;
-}
-
-#progressContainer progress[value]::-webkit-progress-value {
-    background-image:
-    -webkit-linear-gradient(-45deg,
-    transparent 33%, rgba(0, 0, 0, .1) 33%,
-    rgba(0,0, 0, .1) 66%, transparent 66%),
-    -webkit-linear-gradient(top,
-    rgba(255, 255, 255, .25),
-    rgba(0, 0, 0, .25)),
-    -webkit-linear-gradient(left, #09c, #f44);
-
-    border-radius: 2px;
-    background-size: 35px 25px, 100% 100%, 100% 100%;
-}
-
-#progressContainer progress[value] {
-    width: 350px;
-    height: 25px;
+#progressContainer progress {
+    width: 60%;
+    height: 6px;
+    border-radius: 3px;
+    appearance: none;
     -webkit-appearance: none;
-    /*margin: 20px 0;*/
     position: relative;
     top: 50%;
+}
+#progressContainer progress::-webkit-progress-bar {
+    background: var(--backgrounds-subtle, #e8edf2);
+    border-radius: 3px;
+}
+#progressContainer progress::-webkit-progress-value {
+    background: var(--action-primary--default, #0078d3);
+    border-radius: 3px;
+}
+#progressContainer progress::-moz-progress-bar {
+    background: var(--action-primary--default, #0078d3);
+    border-radius: 3px;
 }
 
 .checkmateFormEditField {
@@ -397,44 +362,6 @@ input[type="range"].vanillaSlider::-ms-track {
     width: 100%;
     border: 1px solid #c5dbec;
     height: 30px;
-}
-
-#disclaimer {
-    background-color: #E5F7FD;
-    border: 1px solid #E5F7FD;
-    color: #25477B;
-    fill: #25477B;
-    align-items: center;
-    width: fit-content;
-    border-radius: 6px;
-    padding: 4px 6px;
-    position: relative;
-    display: block;
-}
-
-#disclaimerLabel {
-    font-size: 14px;
-    line-height: 16px;
-    padding-right: 5px;
-    color: #25477B;
-    fill: #25477B;
-    font-weight: 600;
-    letter-spacing: 2px;
-    margin-right: 0px;
-    text-transform: uppercase;
-
-    -webkit-touch-callout: none;
-    /* iOS Safari */
-    -webkit-user-select: none;
-    /* Safari */
-    -khtml-user-select: none;
-    /* Konqueror HTML */
-    -moz-user-select: none;
-    /* Old versions of Firefox */
-    -ms-user-select: none;
-    /* Internet Explorer/Edge */
-    user-select: none;
-    /* Non-prefixed version, currently supported by Chrome, Edge, Opera and Firefox */
 }
 
 /* ── Zenith-aligned additions ── */
@@ -478,4 +405,29 @@ input[type="range"].vanillaSlider::-ms-track {
 #corridorWidth {
     width: 90px;
     text-align: right;
+}
+
+/* ── Page header ── */
+.kml-page-header {
+    padding: 16px 0 10px;
+    border-bottom: 1px solid var(--borders-general, #c0ccd8);
+    margin-bottom: 16px;
+}
+.kml-page-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary, #1f2833);
+    margin: 0;
+}
+
+/* ── Upload area (Zenith only, no dragAndDropUploader layout conflict) ── */
+.kml-upload-area {
+    cursor: pointer;
+    position: relative;
+}
+
+/* ── Disclaimer as Zenith info banner ── */
+.kml-disclaimer {
+    margin-bottom: 12px;
+    font-size: 0.85em;
 }
