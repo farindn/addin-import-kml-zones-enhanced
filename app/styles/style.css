@@ -820,14 +820,14 @@ button.geotabButton.emptyButton {
   */
   .ng-modal-dialog {
     top: auto;
-    bottom: 0;
+    bottom: 60px;  /* sit flush above the ~60px MyGeotab bottom navbar */
     left: 0;
     right: 0;
     transform: none;
     width: 100%;
     border-radius: 16px 16px 0 0;
     padding: var(--sp-5) var(--sp-4) 0;
-    max-height: 72vh;
+    max-height: calc(72vh - 60px);
     overflow-x: hidden;
     overflow-y: auto;
   }
