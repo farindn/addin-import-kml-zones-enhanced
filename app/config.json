@@ -1,12 +1,14 @@
 {
   "name": "Import KML Zones (Enhanced)",
   "supportEmail": "farinnugraha@geotab.com",
-  "version": "2.0.0",
+  "version": "3.4.0",
+  "isSigned": false,
   "items": [{
     "url": "https://farindn.github.io/addin-import-kml-zones-enhanced/importKmlZones.html",
     "path": "ZoneAndMessagesLink/",
+    "category": "ZonesId",
     "menuName": {
-      "en": "Import KML Zones (Enhanced)"
+      "en": "Import KML Zones"
     },
     "icon": "https://farindn.github.io/addin-import-kml-zones-enhanced/images/icon.svg"
   }]
