@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  MOCKUP: Import KML Zones (Enhanced) — Material Design + Geotab Colors
+  Canvas: 1100 x 1390 px
+  Section A (y=0–748):   Main page — desktop layout
+  Section B (y=780–1390): Options modal — overlay state
+
+  How to open in Figma:
+    1. figma.com → New file
+    2. File → Place Image → select this SVG   (or drag the file onto the canvas)
+    3. Each <g id="..."> becomes a named Figma layer you can select & edit
+    4. Ungroup to access individual shapes
+
+  Colors used (all official Geotab brand tokens from Zenith CSS):
+    Primary      #0078d3   --action-primary--default
+    Primary hover #005aa8  --action-primary--hover
+    Text primary  #1f2833  --text-primary
+    Text secondary #4e677e --text-secondary
+    Surface       #f2f5f7  --backgrounds-content-1
+    Surface light #f9fafb  --backgrounds-content-0
+    Hover         #e6ebef  --backgrounds-hover
+    Border        #c0ccd8  --borders-general
+    Error         #c51a11  --action-destructive--default
+    Error bg      #ffeceb  --accents-error--main
+    Success       #2b6436  --accents-success--detail
+    Success bg    #edfef2  --accents-success--main
+-->
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 1100 1390"
+  width="1100"
+  height="1390"
+>
+  <!-- ═══════════════════════════════════════════════════════════
+       DEFINITIONS: filters, gradients
+  ═══════════════════════════════════════════════════════════════ -->
+  <defs>
+    <style>
+      text { font-family: Arial, Helvetica, sans-serif; }
+    </style>
+    <!-- Material Design elevation 3 shadow for modal -->
+    <filter id="modal-shadow" x="-15%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#000000" flood-opacity="0.16"/>
+    </filter>
+    <!-- Subtle card shadow -->
+    <filter id="card-shadow" x="-5%" y="-5%" width="110%" height="115%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000000" flood-opacity="0.08"/>
+    </filter>
+  </defs>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION A — MAIN PAGE (y = 0 → 748)
+       Content area: x=50, width=1000
+  ═══════════════════════════════════════════════════════════════ -->
+  <g id="Main-Page">
+
+    <!-- Page background -->
+    <rect width="1100" height="748" fill="#ffffff"/>
+
+    <!-- ─── 1. Disclaimer Banner ─────────────────────────────── -->
+    <g id="Disclaimer-Banner">
+      <rect x="50" y="24" width="1000" height="44" rx="4" fill="#f9fafb"/>
+      <!-- left accent border (Geotab primary) -->
+      <rect x="50" y="24" width="4" height="44" rx="2" fill="#0078d3"/>
+      <!-- info icon: circle -->
+      <circle cx="76" cy="46" r="9" fill="none" stroke="#0078d3" stroke-width="1.5"/>
+      <text x="76" y="51" text-anchor="middle" font-size="11" font-weight="700" fill="#0078d3">i</text>
+      <!-- text -->
+      <text x="95" y="51" font-size="13" fill="#4e677e">
+        <tspan font-weight="600" fill="#1f2833">Sample add-in / tool</tspan>
+        <tspan> — Provided as-is. No maintenance or support obligations.</tspan>
+      </text>
+    </g>
+
+    <!-- ─── 2. Page Header ───────────────────────────────────── -->
+    <g id="Page-Header">
+      <text x="50" y="110" font-size="24" font-weight="600" fill="#1f2833">Import KML Zones</text>
+      <line x1="50" y1="122" x2="1050" y2="122" stroke="#c0ccd8" stroke-width="1"/>
+    </g>
+
+    <!-- ─── 3. Toolbar ───────────────────────────────────────── -->
+    <g id="Toolbar">
+      <!-- Options: outlined button -->
+      <rect x="50" y="140" width="104" height="36" rx="4" fill="none" stroke="#0078d3" stroke-width="1.5"/>
+      <text x="102" y="163" text-anchor="middle" font-size="14" font-weight="500" fill="#0078d3">Options</text>
+      <!-- Clear: text button -->
+      <text x="174" y="163" font-size="14" font-weight="500" fill="#4e677e">Clear</text>
+    </g>
+
+    <!-- ─── 4. Upload Area ───────────────────────────────────── -->
+    <!--
+      UPLOAD AREA NOTES FOR IMPLEMENTATION:
+      - Must keep class="uploaderElementsContainer" (JS drag-drop hook)
+      - Must keep class="uploadFileElement" on the hidden <input> (JS click hook)
+      - Visual classes (.kml-upload etc.) can be freely changed
+      - The hidden <input> must have: position:absolute; inset:0; opacity:0; width:100%; height:100%
+      - This makes the entire dashed box clickable
+    -->
+    <g id="Upload-Area">
+      <!-- Box -->
+      <rect x="50" y="192" width="1000" height="150" rx="8" fill="#f9fafb"
+            stroke="#c0ccd8" stroke-width="2" stroke-dasharray="8 4"/>
+      <!-- Icon background circle -->
+      <circle cx="550" cy="243" r="28" fill="#e6ebef"/>
+      <!-- Upload arrow icon (simplified) -->
+      <line x1="550" y1="232" x2="550" y2="254" stroke="#4e677e" stroke-width="2.5" stroke-linecap="round"/>
+      <polyline points="542,240 550,232 558,240" fill="none" stroke="#4e677e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="540" y1="258" x2="560" y2="258" stroke="#4e677e" stroke-width="2.5" stroke-linecap="round"/>
+      <!-- Primary label -->
+      <text x="550" y="295" text-anchor="middle" font-size="16" font-weight="500" fill="#1f2833">Drop your KML file here</text>
+      <!-- Secondary label — note the underlined "click to browse" -->
+      <text x="550" y="318" text-anchor="middle" font-size="13" fill="#4e677e">or </text>
+      <text x="573" y="318" text-anchor="start" font-size="13" fill="#0078d3" text-decoration="underline">click to browse</text>
+      <text x="660" y="318" text-anchor="start" font-size="13" fill="#4e677e"> · Accepts .kml (Google My Maps, Google Earth)</text>
+    </g>
+
+    <!-- ─── 5. Import Toolbar (right-aligned) ────────────────── -->
+    <g id="Import-Toolbar">
+      <!-- Select all (text) -->
+      <text x="738" y="384" font-size="14" font-weight="500" fill="#4e677e">Select all</text>
+      <!-- Hide imported (text) -->
+      <text x="828" y="384" font-size="14" font-weight="500" fill="#4e677e">Hide imported</text>
+      <!-- Import selected zones (primary filled) -->
+      <rect x="944" y="364" width="206" height="36" rx="4" fill="#0078d3"/>
+      <text x="1047" y="387" text-anchor="middle" font-size="14" font-weight="500" fill="#ffffff">Import selected zones</text>
+    </g>
+
+    <!-- ─── 6. Polygon + Route Corridor Table ────────────────── -->
+    <g id="Polygon-Table">
+      <text x="50" y="420" font-size="14" font-weight="600" fill="#1f2833">Polygon &amp; Route Corridor Zones</text>
+
+      <!-- Header row -->
+      <rect x="50" y="428" width="1000" height="36" fill="#f2f5f7"/>
+      <text x="66"  y="451" font-size="11" font-weight="700" fill="#4e677e" letter-spacing="0.8">NAME</text>
+      <text x="454" y="451" font-size="11" font-weight="700" fill="#4e677e" letter-spacing="0.8">DESCRIPTION</text>
+      <text x="850" y="451" font-size="11" font-weight="700" fill="#4e677e" letter-spacing="0.8">COLOR</text>
+      <text x="948" y="451" font-size="11" font-weight="700" fill="#4e677e" letter-spacing="0.8">SELECT</text>
+      <line x1="50" y1="464" x2="1050" y2="464" stroke="#c0ccd8" stroke-width="1.5"/>
+
+      <!-- Row 1 (selected — checked) -->
+      <rect x="50" y="464" width="1000" height="44" fill="#ffffff"/>
+      <text x="66"  y="491" font-size="14" fill="#1f2833">Jakarta Route Corridor</text>
+      <text x="454" y="491" font-size="14" fill="#4e677e">Route: Bekasi → MODA, Jakarta</text>
+      <rect x="850" y="476" width="28" height="20" rx="3" fill="#0078d3"/>
+      <!-- Checkbox checked -->
+      <rect x="952" y="474" width="20" height="20" rx="3" fill="#0078d3"/>
+      <polyline points="957,484 961,489 969,480" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="50" y1="508" x2="1050" y2="508" stroke="#e0e0e0" stroke-width="1"/>
+
+      <!-- Row 2 (not selected) -->
+      <rect x="50" y="508" width="1000" height="44" fill="#f9fafb"/>
+      <text x="66"  y="535" font-size="14" fill="#1f2833">Zone B – Tol Cikampek</text>
+      <text x="454" y="535" font-size="14" fill="#4e677e">Secondary route</text>
+      <rect x="850" y="520" width="28" height="20" rx="3" fill="#e68a00"/>
+      <!-- Checkbox unchecked -->
+      <rect x="952" y="518" width="20" height="20" rx="3" fill="none" stroke="#c0ccd8" stroke-width="1.5"/>
+      <line x1="50" y1="552" x2="1050" y2="552" stroke="#e0e0e0" stroke-width="1"/>
+    </g>
+
+    <!-- ─── 7. Point Zones Table ─────────────────────────────── -->
+    <g id="Point-Table">
+      <text x="50" y="576" font-size="14" font-weight="600" fill="#1f2833">Point Zones</text>
+
+      <!-- Header row -->
+      <rect x="50" y="584" width="1000" height="36" fill="#f2f5f7"/>
+      <text x="66"  y="607" font-size="11" font-weight="700" fill="#4e677e" letter-spacing="0.8">NAME</text>
+      <text x="454" y="607" font-size="11" font-weight="700" fill="#4e677e" letter-spacing="0.8">DESCRIPTION</text>
+      <text x="850" y="607" font-size="11" font-weight="700" fill="#4e677e" letter-spacing="0.8">COLOR</text>
+      <text x="948" y="607" font-size="11" font-weight="700" fill="#4e677e" letter-spacing="0.8">SELECT</text>
+      <line x1="50" y1="620" x2="1050" y2="620" stroke="#c0ccd8" stroke-width="1.5"/>
+
+      <!-- Row 1 -->
+      <rect x="50" y="620" width="1000" height="44" fill="#ffffff"/>
+      <text x="66"  y="647" font-size="14" fill="#1f2833">Start – Griya Aqaba B13</text>
+      <rect x="850" y="632" width="28" height="20" rx="3" fill="#c51a11"/>
+      <rect x="952" y="630" width="20" height="20" rx="3" fill="#0078d3"/>
+      <polyline points="957,640 961,645 969,636" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="50" y1="664" x2="1050" y2="664" stroke="#e0e0e0" stroke-width="1"/>
+
+      <!-- Row 2 -->
+      <rect x="50" y="664" width="1000" height="44" fill="#f9fafb"/>
+      <text x="66"  y="691" font-size="14" fill="#1f2833">End – MODA (United Tractors Wings)</text>
+      <rect x="850" y="676" width="28" height="20" rx="3" fill="#2b6436"/>
+      <rect x="952" y="674" width="20" height="20" rx="3" fill="#0078d3"/>
+      <polyline points="957,684 961,689 969,680" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="50" y1="708" x2="1050" y2="708" stroke="#e0e0e0" stroke-width="1"/>
+    </g>
+
+  </g><!-- /Main-Page -->
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION DIVIDER LABEL
+  ═══════════════════════════════════════════════════════════════ -->
+  <rect y="748" width="1100" height="32" fill="#1f2833"/>
+  <text x="550" y="770" text-anchor="middle" font-size="11" font-weight="700"
+        fill="#ffffff" letter-spacing="2">OPTIONS MODAL — OVERLAY STATE</text>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION B — OPTIONS MODAL (y = 780 → 1390)
+  ═══════════════════════════════════════════════════════════════ -->
+  <g id="Options-Modal">
+
+    <!-- Simulated page background (blurred/dimmed) -->
+    <rect y="780" width="1100" height="610" fill="#f5f5f5"/>
+
+    <!-- Scrim overlay — rgba equivalent via fill + fill-opacity -->
+    <rect y="780" width="1100" height="610" fill="#000000" fill-opacity="0.32"/>
+
+    <!-- ─── Modal Card ─────────────────────────────────────── -->
+    <!--
+      MODAL NOTES FOR IMPLEMENTATION:
+      - Use position: fixed (not absolute) so it stays centered on scroll
+      - width: min(480px, 94vw)  — responsive for mobile
+      - On mobile (<480px): slide up from bottom, border-radius top only
+      - border-radius: 12px (Material Design standard)
+    -->
+    <g id="Modal-Card">
+      <!-- Card shadow + background -->
+      <rect x="310" y="808" width="480" height="542" rx="12" fill="#ffffff"
+            filter="url(#modal-shadow)"/>
+
+      <!-- Header -->
+      <text x="334" y="848" font-size="20" font-weight="600" fill="#1f2833">Options</text>
+
+      <!-- Close button (×) — top right -->
+      <circle cx="772" cy="840" r="16" fill="none" stroke="#e6ebef" stroke-width="0"/>
+      <text x="772" y="847" text-anchor="middle" font-size="18" fill="#4e677e">✕</text>
+
+      <!-- Divider -->
+      <line x1="310" y1="862" x2="790" y2="862" stroke="#c0ccd8" stroke-width="1"/>
+
+      <!-- ─── Zone Types ─── -->
+      <text x="334" y="886" font-size="11" font-weight="700" fill="#4e677e" letter-spacing="0.8">ZONE TYPES</text>
+      <rect x="334" y="894" width="432" height="64" rx="4" fill="none" stroke="#0078d3" stroke-width="1.5"/>
+      <!-- Active focus indicator -->
+      <text x="350" y="917" font-size="14" fill="#1f2833">Customer</text>
+      <rect x="344" y="908" width="76" height="20" rx="2" fill="#0078d3" fill-opacity="0.12"/>
+      <text x="350" y="948" font-size="14" fill="#4e677e">Home</text>
+      <text x="490" y="917" font-size="14" fill="#4e677e">Office</text>
+      <text x="490" y="948" font-size="14" fill="#4e677e">Others</text>
+
+      <!-- ─── Color ─── -->
+      <text x="334" y="980" font-size="11" font-weight="700" fill="#4e677e" letter-spacing="0.8">COLOR</text>
+      <rect x="334" y="988" width="200" height="40" rx="4" fill="none" stroke="#c0ccd8" stroke-width="1.5"/>
+      <rect x="340" y="994" width="28" height="28" rx="3" fill="#0078d3"/>
+      <text x="376" y="1013" font-size="14" fill="#1f2833">#0078d3</text>
+
+      <!-- ─── Corridor Width ─── -->
+      <text x="334" y="1050" font-size="11" font-weight="700" fill="#4e677e" letter-spacing="0.8">ROUTE CORRIDOR WIDTH (M)</text>
+      <rect x="334" y="1058" width="90" height="40" rx="4" fill="none" stroke="#c0ccd8" stroke-width="1.5"/>
+      <text x="379" y="1083" text-anchor="middle" font-size="14" fill="#1f2833">100</text>
+      <text x="432" y="1083" font-size="12" fill="#4e677e">each side · 200 m total corridor width</text>
+
+      <!-- ─── Stops Toggle ─── -->
+      <text x="334" y="1120" font-size="11" font-weight="700" fill="#4e677e" letter-spacing="0.8">INDICATE STOPS WITHIN ZONE</text>
+      <!-- Yes (active = filled primary) -->
+      <rect x="334" y="1128" width="60" height="32" rx="4" fill="#0078d3"/>
+      <text x="364" y="1149" text-anchor="middle" font-size="14" font-weight="500" fill="#ffffff">Yes</text>
+      <!-- No (inactive = outlined) -->
+      <rect x="398" y="1128" width="60" height="32" rx="4" fill="none" stroke="#c0ccd8" stroke-width="1.5"/>
+      <text x="428" y="1149" text-anchor="middle" font-size="14" fill="#4e677e">No</text>
+
+      <!-- Divider above actions -->
+      <line x1="310" y1="1192" x2="790" y2="1192" stroke="#c0ccd8" stroke-width="1"/>
+
+      <!-- ─── Action Buttons ─── -->
+      <!-- Set defaults (text) -->
+      <text x="650" y="1229" text-anchor="end" font-size="14" font-weight="500" fill="#4e677e">Set defaults</text>
+      <!-- Apply (primary filled) -->
+      <rect x="660" y="1210" width="110" height="36" rx="4" fill="#0078d3"/>
+      <text x="715" y="1233" text-anchor="middle" font-size="14" font-weight="500" fill="#ffffff">Apply</text>
+
+      <!-- Note: modal bottom padding = 24px, card ends at y=1350 -->
+    </g>
+
+  </g><!-- /Options-Modal -->
+
+  <!-- ═══════════════════════════════════════════════════════════
+       ANNOTATIONS — implementation notes on the right side
+  ═══════════════════════════════════════════════════════════════ -->
+  <!-- Bottom label bar -->
+  <rect y="1360" width="1100" height="30" fill="#f2f5f7"/>
+  <text x="550" y="1380" text-anchor="middle" font-size="11" fill="#4e677e">
+    Import KML Zones Enhanced — Material Design Mockup · Geotab Brand Colors · v1.0
+  </text>
+
+</svg>

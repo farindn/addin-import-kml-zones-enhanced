@@ -1,0 +1,335 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  MOCKUP-MOBILE: Import KML Zones — Material Design Mobile (390px)
+  Canvas: 900 x 960 px
+
+  Two screens shown side by side:
+    Left  (x=30):  Main page — after KML upload, zones displayed
+    Right (x=480): Options modal as Material bottom sheet
+
+  How to open in Figma:
+    1. figma.com → New file
+    2. Drag this SVG onto the canvas  (or File → Place Image)
+    3. Ungroup to access named layers
+
+  Colors — official Geotab brand tokens:
+    Primary       #0078d3
+    Text primary  #1f2833
+    Text secondary #4e677e
+    Surface       #f2f5f7
+    Surface light #f9fafb
+    Border        #c0ccd8
+    Error         #c51a11
+    Success       #2b6436
+-->
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 900 960"
+  width="900"
+  height="960"
+>
+  <defs>
+    <style>text { font-family: Arial, Helvetica, sans-serif; }</style>
+    <filter id="phone-shadow" x="-8%" y="-4%" width="116%" height="108%">
+      <feDropShadow dx="0" dy="4" stdDeviation="12" flood-color="#000000" flood-opacity="0.12"/>
+    </filter>
+    <clipPath id="clip-left">
+      <rect x="30" y="60" width="390" height="820" rx="12"/>
+    </clipPath>
+    <clipPath id="clip-right">
+      <rect x="480" y="60" width="390" height="820" rx="12"/>
+    </clipPath>
+  </defs>
+
+  <!-- Canvas background -->
+  <rect width="900" height="960" fill="#e8edf2"/>
+
+  <!-- ══════════════════════════════════════════════════════════
+       LABELS ABOVE PHONES
+  ═══════════════════════════════════════════════════════════════ -->
+  <text x="225" y="44" text-anchor="middle" font-size="13" font-weight="700"
+        fill="#1f2833" letter-spacing="1">MAIN PAGE — AFTER UPLOAD</text>
+  <text x="675" y="44" text-anchor="middle" font-size="13" font-weight="700"
+        fill="#1f2833" letter-spacing="1">OPTIONS — BOTTOM SHEET</text>
+
+  <!-- ══════════════════════════════════════════════════════════
+       LEFT PHONE — Main Page (x=30, y=60, w=390, h=820)
+  ═══════════════════════════════════════════════════════════════ -->
+  <g id="Phone-Left">
+
+    <!-- Phone frame -->
+    <rect x="30" y="60" width="390" height="820" rx="12"
+          fill="#ffffff" filter="url(#phone-shadow)"/>
+    <rect x="30" y="60" width="390" height="820" rx="12"
+          fill="none" stroke="#c0ccd8" stroke-width="1"/>
+
+    <!-- Clipped content -->
+    <g clip-path="url(#clip-left)">
+
+      <!-- Status bar -->
+      <rect x="30" y="60" width="390" height="28" fill="#1f2833"/>
+      <text x="225" y="79" text-anchor="middle" font-size="11" fill="#ffffff">9:41</text>
+      <!-- Signal/battery dots (simplified) -->
+      <circle cx="365" cy="74" r="3" fill="#ffffff"/>
+      <circle cx="375" cy="74" r="3" fill="#ffffff"/>
+      <circle cx="385" cy="74" r="3" fill="#ffffff"/>
+      <circle cx="80" cy="74" r="3" fill="#ffffff"/>
+      <circle cx="90" cy="74" r="3" fill="#ffffff"/>
+
+      <!-- ─── 1. Disclaimer ─── (y=88) -->
+      <g id="L-Disclaimer">
+        <rect x="30" y="88" width="390" height="44" fill="#f9fafb"/>
+        <rect x="30" y="88" width="4" height="44" fill="#0078d3"/>
+        <!-- info icon -->
+        <circle cx="54" cy="110" r="8" fill="none" stroke="#0078d3" stroke-width="1.5"/>
+        <text x="54" y="115" text-anchor="middle" font-size="10" font-weight="700" fill="#0078d3">i</text>
+        <!-- text (two lines for narrow width) -->
+        <text x="70" y="105" font-size="11" font-weight="600" fill="#1f2833">Sample add-in/tool</text>
+        <text x="70" y="121" font-size="11" fill="#4e677e">Provided as-is. No support obligations.</text>
+      </g>
+
+      <!-- ─── 2. Page Header ─── (y=144) -->
+      <g id="L-Header">
+        <text x="46" y="165" font-size="20" font-weight="600" fill="#1f2833">Import KML Zones</text>
+        <line x1="30" y1="176" x2="420" y2="176" stroke="#c0ccd8" stroke-width="1"/>
+      </g>
+
+      <!-- ─── 3. Toolbar ─── (y=188) -->
+      <g id="L-Toolbar">
+        <!-- Options: outlined -->
+        <rect x="46" y="188" width="96" height="36" rx="4"
+              fill="none" stroke="#0078d3" stroke-width="1.5"/>
+        <text x="94" y="211" text-anchor="middle" font-size="13"
+              font-weight="500" fill="#0078d3">Options</text>
+        <!-- Clear: text -->
+        <text x="158" y="211" font-size="13" font-weight="500" fill="#4e677e">Clear</text>
+      </g>
+
+      <!-- ─── 4. Upload Area ─── (y=238) -->
+      <g id="L-Upload">
+        <!--
+          NOTE: keep class="uploaderElementsContainer" on this div in HTML
+          hidden <input class="uploadFileElement"> must fill 100% of the box
+        -->
+        <rect x="46" y="238" width="358" height="118" rx="8" fill="#f9fafb"
+              stroke="#c0ccd8" stroke-width="2" stroke-dasharray="7 4"/>
+        <!-- Icon -->
+        <circle cx="225" cy="280" r="22" fill="#e6ebef"/>
+        <line x1="225" y1="270" x2="225" y2="289" stroke="#4e677e" stroke-width="2.5" stroke-linecap="round"/>
+        <polyline points="218,277 225,270 232,277" fill="none" stroke="#4e677e"
+                  stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="218" y1="292" x2="232" y2="292" stroke="#4e677e" stroke-width="2.5" stroke-linecap="round"/>
+        <!-- Label -->
+        <text x="225" y="321" text-anchor="middle" font-size="13" font-weight="500" fill="#1f2833">
+          Drop KML file here
+        </text>
+        <text x="225" y="338" text-anchor="middle" font-size="12" fill="#4e677e">
+          or <tspan fill="#0078d3" text-decoration="underline">click to browse</tspan>
+        </text>
+      </g>
+
+      <!-- ─── 5. Import Button (full-width, primary) ─── (y=370) -->
+      <g id="L-Import-Btn">
+        <rect x="46" y="370" width="358" height="44" rx="4" fill="#0078d3"/>
+        <text x="225" y="397" text-anchor="middle" font-size="14"
+              font-weight="500" fill="#ffffff">Import selected zones</text>
+      </g>
+
+      <!-- ─── 6. Polygon / Corridor Zones Table ─── (y=428) -->
+      <g id="L-Polygon-Table">
+        <text x="46" y="444" font-size="13" font-weight="600" fill="#1f2833">
+          Polygon &amp; Route Corridor Zones
+        </text>
+
+        <!-- Header -->
+        <rect x="30" y="452" width="390" height="28" fill="#f2f5f7"/>
+        <text x="46" y="471"  font-size="10" font-weight="700" fill="#4e677e" letter-spacing="0.8">NAME</text>
+        <text x="256" y="471" font-size="10" font-weight="700" fill="#4e677e" letter-spacing="0.8">COLOR</text>
+        <text x="314" y="471" font-size="10" font-weight="700" fill="#4e677e" letter-spacing="0.8">SELECT</text>
+        <line x1="30" y1="480" x2="420" y2="480" stroke="#c0ccd8" stroke-width="1.5"/>
+
+        <!-- Row 1 — selected (checked) -->
+        <rect x="30" y="480" width="390" height="40" fill="#ffffff"/>
+        <text x="46" y="505" font-size="13" fill="#1f2833">Jakarta Route Corridor</text>
+        <rect x="256" y="492" width="24" height="16" rx="3" fill="#0078d3"/>
+        <rect x="314" y="490" width="20" height="20" rx="3" fill="#0078d3"/>
+        <polyline points="319,500 323,505 331,496" fill="none" stroke="#ffffff"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="30" y1="520" x2="420" y2="520" stroke="#e0e0e0" stroke-width="1"/>
+
+        <!-- Row 2 — not selected -->
+        <rect x="30" y="520" width="390" height="40" fill="#f9fafb"/>
+        <text x="46" y="545" font-size="13" fill="#1f2833">Zone B – Tol Cikampek</text>
+        <rect x="256" y="532" width="24" height="16" rx="3" fill="#e68a00"/>
+        <rect x="314" y="530" width="20" height="20" rx="3" fill="none"
+              stroke="#c0ccd8" stroke-width="1.5"/>
+        <line x1="30" y1="560" x2="420" y2="560" stroke="#e0e0e0" stroke-width="1"/>
+      </g>
+
+      <!-- ─── 7. Point Zones Table ─── (y=574) -->
+      <g id="L-Point-Table">
+        <text x="46" y="580" font-size="13" font-weight="600" fill="#1f2833">Point Zones</text>
+
+        <!-- Header -->
+        <rect x="30" y="588" width="390" height="28" fill="#f2f5f7"/>
+        <text x="46" y="607"  font-size="10" font-weight="700" fill="#4e677e" letter-spacing="0.8">NAME</text>
+        <text x="256" y="607" font-size="10" font-weight="700" fill="#4e677e" letter-spacing="0.8">COLOR</text>
+        <text x="314" y="607" font-size="10" font-weight="700" fill="#4e677e" letter-spacing="0.8">SELECT</text>
+        <line x1="30" y1="616" x2="420" y2="616" stroke="#c0ccd8" stroke-width="1.5"/>
+
+        <!-- Row 1 -->
+        <rect x="30" y="616" width="390" height="40" fill="#ffffff"/>
+        <text x="46" y="641" font-size="13" fill="#1f2833">Start – Griya Aqaba B13</text>
+        <rect x="256" y="628" width="24" height="16" rx="3" fill="#c51a11"/>
+        <rect x="314" y="626" width="20" height="20" rx="3" fill="#0078d3"/>
+        <polyline points="319,636 323,641 331,632" fill="none" stroke="#ffffff"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="30" y1="656" x2="420" y2="656" stroke="#e0e0e0" stroke-width="1"/>
+
+        <!-- Row 2 -->
+        <rect x="30" y="656" width="390" height="40" fill="#f9fafb"/>
+        <text x="46" y="681" font-size="13" fill="#1f2833">End – MODA (UT Wings)</text>
+        <rect x="256" y="668" width="24" height="16" rx="3" fill="#2b6436"/>
+        <rect x="314" y="666" width="20" height="20" rx="3" fill="#0078d3"/>
+        <polyline points="319,676 323,681 331,672" fill="none" stroke="#ffffff"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="30" y1="696" x2="420" y2="696" stroke="#e0e0e0" stroke-width="1"/>
+      </g>
+
+      <!-- Scroll indicator (content continues below) -->
+      <text x="225" y="740" text-anchor="middle" font-size="11" fill="#c0ccd8">↕ scrollable</text>
+
+    </g><!-- /clip-left -->
+  </g><!-- /Phone-Left -->
+
+  <!-- ══════════════════════════════════════════════════════════
+       RIGHT PHONE — Bottom Sheet (x=480, y=60, w=390, h=820)
+  ═══════════════════════════════════════════════════════════════ -->
+  <g id="Phone-Right">
+
+    <!-- Phone frame -->
+    <rect x="480" y="60" width="390" height="820" rx="12"
+          fill="#ffffff" filter="url(#phone-shadow)"/>
+    <rect x="480" y="60" width="390" height="820" rx="12"
+          fill="none" stroke="#c0ccd8" stroke-width="1"/>
+
+    <g clip-path="url(#clip-right)">
+
+      <!-- ─── Dimmed page behind modal ─── -->
+      <!-- Status bar -->
+      <rect x="480" y="60" width="390" height="28" fill="#1f2833"/>
+      <text x="675" y="79" text-anchor="middle" font-size="11" fill="#ffffff">9:41</text>
+
+      <!-- Page content (very faint — behind scrim) -->
+      <rect x="480" y="88"  width="390" height="44"  fill="#f9fafb" fill-opacity="0.5"/>
+      <rect x="496" y="152" width="200" height="16"  fill="#c0ccd8" fill-opacity="0.4" rx="2"/>
+      <rect x="480" y="176" width="390" height="1"   fill="#c0ccd8" fill-opacity="0.5"/>
+      <rect x="496" y="192" width="96"  height="36"  fill="none"    stroke="#c0ccd8" stroke-opacity="0.4" stroke-width="1" rx="4"/>
+      <rect x="496" y="244" width="358" height="118" fill="#f9fafb"  fill-opacity="0.5" rx="8"
+            stroke="#c0ccd8" stroke-opacity="0.3" stroke-width="1.5" stroke-dasharray="7 4"/>
+      <rect x="496" y="378" width="358" height="44"  fill="#c0ccd8" fill-opacity="0.3" rx="4"/>
+
+      <!-- Scrim overlay -->
+      <rect x="480" y="60" width="390" height="820" fill="#000000" fill-opacity="0.40"/>
+
+      <!-- ─── Bottom Sheet ─── -->
+      <!--
+        MOBILE IMPLEMENTATION NOTE:
+        - position: fixed; bottom: 0; left: 0; right: 0
+        - border-radius: 16px 16px 0 0  (rounded top corners only)
+        - max-height: 80vh; overflow-y: auto
+        - Use CSS @media (max-width: 480px) to switch from centered dialog to bottom sheet
+        - Add padding-bottom: env(safe-area-inset-bottom) for iPhone notch
+      -->
+      <g id="R-Bottom-Sheet">
+
+        <!-- Sheet background (rounded top corners only) -->
+        <rect x="480" y="360" width="390" height="520" rx="0" fill="#ffffff"/>
+        <!-- Top-rounded part -->
+        <rect x="480" y="360" width="390" height="32" rx="16" fill="#ffffff"/>
+
+        <!-- Handle bar -->
+        <rect x="655" y="372" width="40" height="4" rx="2" fill="#c0ccd8"/>
+
+        <!-- Title row -->
+        <text x="504" y="412" font-size="18" font-weight="600" fill="#1f2833">Options</text>
+        <!-- Close button -->
+        <circle cx="845" cy="404" r="18" fill="#f2f5f7"/>
+        <text x="845" y="411" text-anchor="middle" font-size="16" fill="#4e677e">✕</text>
+
+        <!-- Divider -->
+        <line x1="480" y1="426" x2="870" y2="426" stroke="#c0ccd8" stroke-width="1"/>
+
+        <!-- ─── Zone Types ─── -->
+        <text x="504" y="450" font-size="10" font-weight="700" fill="#4e677e" letter-spacing="0.8">ZONE TYPES</text>
+        <rect x="504" y="458" width="362" height="56" rx="4" fill="none"
+              stroke="#0078d3" stroke-width="1.5"/>
+        <!-- highlight selected -->
+        <rect x="508" y="462" width="64" height="20" rx="2" fill="#0078d3" fill-opacity="0.12"/>
+        <text x="518" y="477" font-size="13" fill="#1f2833">Customer</text>
+        <text x="518" y="498" font-size="13" fill="#4e677e">Home</text>
+        <text x="626" y="477" font-size="13" fill="#4e677e">Office</text>
+        <text x="626" y="498" font-size="13" fill="#4e677e">Others</text>
+
+        <!-- ─── Color ─── -->
+        <text x="504" y="534" font-size="10" font-weight="700" fill="#4e677e" letter-spacing="0.8">COLOR</text>
+        <rect x="504" y="542" width="180" height="38" rx="4" fill="none"
+              stroke="#c0ccd8" stroke-width="1.5"/>
+        <rect x="510" y="548" width="26" height="26" rx="3" fill="#0078d3"/>
+        <text x="544" y="566" font-size="13" fill="#1f2833">#0078d3</text>
+
+        <!-- ─── Corridor Width ─── -->
+        <text x="504" y="602" font-size="10" font-weight="700" fill="#4e677e" letter-spacing="0.8">ROUTE CORRIDOR WIDTH (M)</text>
+        <rect x="504" y="610" width="80" height="38" rx="4" fill="none"
+              stroke="#c0ccd8" stroke-width="1.5"/>
+        <text x="544" y="634" text-anchor="middle" font-size="13" fill="#1f2833">100</text>
+        <text x="592" y="634" font-size="12" fill="#4e677e">m each side</text>
+
+        <!-- ─── Indicate Stops ─── -->
+        <text x="504" y="668" font-size="10" font-weight="700" fill="#4e677e" letter-spacing="0.8">INDICATE STOPS WITHIN ZONE</text>
+        <!-- Yes (active) -->
+        <rect x="504" y="676" width="64" height="32" rx="4" fill="#0078d3"/>
+        <text x="536" y="697" text-anchor="middle" font-size="13" font-weight="500" fill="#ffffff">Yes</text>
+        <!-- No (inactive) -->
+        <rect x="572" y="676" width="64" height="32" rx="4" fill="none"
+              stroke="#c0ccd8" stroke-width="1.5"/>
+        <text x="604" y="697" text-anchor="middle" font-size="13" fill="#4e677e">No</text>
+
+        <!-- Divider before buttons -->
+        <line x1="480" y1="726" x2="870" y2="726" stroke="#c0ccd8" stroke-width="1"/>
+
+        <!-- ─── Action Buttons ─── -->
+        <!-- Set defaults (text, left-aligned) -->
+        <text x="504" y="764" font-size="13" font-weight="500" fill="#4e677e">Set defaults</text>
+        <!-- Apply (full-width primary) -->
+        <rect x="504" y="774" width="362" height="44" rx="4" fill="#0078d3"/>
+        <text x="685" y="801" text-anchor="middle" font-size="14"
+              font-weight="500" fill="#ffffff">Apply</text>
+
+        <!-- iPhone home indicator area -->
+        <rect x="480" y="836" width="390" height="44" fill="#ffffff"/>
+        <rect x="635" y="852" width="120" height="4" rx="2" fill="#1f2833" fill-opacity="0.18"/>
+
+      </g><!-- /R-Bottom-Sheet -->
+
+    </g><!-- /clip-right -->
+  </g><!-- /Phone-Right -->
+
+  <!-- ══════════════════════════════════════════════════════════
+       RESPONSIVE NOTES (annotation below phones)
+  ═══════════════════════════════════════════════════════════════ -->
+  <rect y="900" width="900" height="60" fill="#1f2833"/>
+
+  <text x="32" y="923" font-size="11" font-weight="700" fill="#ffffff" letter-spacing="1">KEY MOBILE CHANGES VS DESKTOP</text>
+  <text x="32" y="943" font-size="11" fill="#8da4b9">
+    Tables: Name + Color + Select only (Description dropped) ·
+    Import button: full-width ·
+    Options modal: bottom sheet (not centered dialog) ·
+    Font: 13–20px ·
+    Touch targets: min 40px
+  </text>
+  <text x="32" y="957" font-size="11" fill="#8da4b9">
+    @media (&lt;480px): dialog → bottom sheet  ·  padding: 16px (not 32px)  ·  table scrolls horizontally if needed
+  </text>
+
+</svg>

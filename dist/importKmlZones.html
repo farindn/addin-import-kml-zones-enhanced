@@ -10,8 +10,9 @@
 
   <link rel="stylesheet" href="styles/main.css">
 
-  <!-- Zenith design tokens and base styles -->
-  <link rel="stylesheet" href="https://unpkg.com/@geotab/zenith@latest/dist/index.css">
+  <!-- Google Material Symbols Rounded (subset: only icons used in this add-in) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0&display=block&text=upload_file,close,info,check_circle,error" rel="stylesheet">
 
   <script src="scripts/vendor.js"></script>
   <script src="scripts/main.js"></script>
@@ -21,185 +22,202 @@
 
   <div id="importKmlZones" class="hidden">
 
+    <!-- Disclaimer banner -->
     <div id="disclaimer">
-        <label id="disclaimerLabel">Sample add-in/tool</label>
-        <p>This tool is provided as an example and is available on an As-Is basis. You must assume all the risks and
-            costs associated with the use of the sample tool, including, without limitation, any damage to any
-            equipment, software, information or data. In addition, we are not obligated to provide any maintenance,
-            technical or other support for the sample tool. In order to improve our products, we may at any time,
-            and without warning, change the design, presentation, or functionality of the software.</p>
+      <span class="material-symbols-rounded kml-disclaimer-icon">info</span>
+      <span>
+        <strong id="disclaimerLabel">Sample add-in/tool</strong>
+        — This tool is provided as an example and is available on an As-Is basis. You must assume all the risks and
+        costs associated with the use of the sample tool, including, without limitation, any damage to any equipment,
+        software, information or data. In addition, we are not obligated to provide any maintenance, technical or other
+        support for the sample tool.
+      </span>
     </div>
 
-    <div class="checkmatePageHeader">
-      <h1 class="checkmatePageName">Import KML Zones</h1>
+    <!-- Page header -->
+    <div class="kml-page-header">
+      <h1 class="kml-page-title">Import KML Zones</h1>
     </div>
 
-  <div ng-controller="optionsController" id="optionsControllerElement" style="margin-top: 20px;">
-      <button ng-click="toggleModal()" class="geo-button zen-button">Options</button>
-      <button ng-click="clear()" class="geo-button zen-button">Clear</button>
+    <!-- Options toolbar -->
+    <div ng-controller="optionsController" id="optionsControllerElement" class="kml-toolbar">
+      <button ng-click="toggleModal()" class="kml-btn kml-btn--outlined">Options</button>
+      <button ng-click="clear()" class="kml-btn kml-btn--text">Clear</button>
       <modal-dialog show="modalShown">
-          <ul class="geotabOptionsMenuElements">
-              <li class="geotabOptionsMenuElement">
-                  <label for="typesSelect">Types</label>
-
-                  <div class="geotabOptionsMenuElementValue">
-                      <select id="typesSelect" class="ng-modal-dialog-elem checkmateFormEditField" ng-model="zoneTypeSelect"
-                              ng-options="option.name for option in zoneTypeOptions track by option.id" multiple="true"
-                              ng-mousedown="selectType($event)">
-                      </select>
+        <ul class="geotabOptionsMenuElements">
+          <li class="geotabOptionsMenuElement">
+            <label for="typesSelect">Zone Types</label>
+            <div class="geotabOptionsMenuElementValue">
+              <select id="typesSelect" class="checkmateFormEditField ng-modal-dialog-elem"
+                      ng-model="zoneTypeSelect"
+                      ng-options="option.name for option in zoneTypeOptions track by option.id"
+                      multiple="true"
+                      ng-mousedown="selectType($event)">
+              </select>
+            </div>
+          </li>
+          <li style="height: 90px;" class="geotabOptionsMenuElement">
+            <label>Color</label>
+            <div class="geotabOptionsMenuElementValue">
+              <div id="colorPicker">
+                <div class="formColorPicker">
+                  <input class="colorPickerField" title="This is the selected color"
+                         ng-model="colorPickerValue" id="colorPickerField" readonly="true"/>
+                  <div class="quickColorsBox"></div>
+                  <div class="transparencySlider" style="display: none;">
+                    <label>Transparency: <span class="transparencySliderValue noTranslate"
+                                               ng-bind="transparencySliderValue"></span>%</label>
+                    <div class="transparencySliderControl" title="This is the selected transparency"></div>
                   </div>
-              </li>
-              <li style="height: 90px;" class="geotabOptionsMenuElement">
-                  <label>Color</label>
-
-                  <div class="geotabOptionsMenuElementValue">
-                      <div id="colorPicker">
-                          <div class="formColorPicker">
-                              <input class="colorPickerField" title="This is the selected color"
-                                     ng-model="colorPickerValue" style="" id="colorPickerField" readonly="true"/>
-
-                              <div class="quickColorsBox">
-                              </div>
-                              <div class="transparencySlider" style="display: none;">
-                                  <label>Transparency:<span
-                                          class="transparencySliderValue noTranslate"
-                                          ng-bind="transparencySliderValue"></span>%</label>
-
-                                  <div class="transparencySliderControl"
-                                       title="This is the selected transparency"></div>
-                              </div>
-                              <div class="transparencyButtonSet horizontalButtonSet" style="display: none;">
-                                  <input type="radio" id="colorPicker_DisplayedFalseId" class="geotabSwitchButton"
-                                         name="asd"/>
-                                  <label for="colorPicker_DisplayedFalseId" class="geo-button">Not visible</label>
-                                  <input type="radio" id="colorPicker_DisplayedTrueId" class="geotabSwitchButton"
-                                         name="asd"/>
-                                  <label for="colorPicker_DisplayedTrueId" class="geo-button">Visible</label>
-                              </div>
-                          </div>
-                      </div>
+                  <div class="transparencyButtonSet horizontalButtonSet" style="display: none;">
+                    <input type="radio" id="colorPicker_DisplayedFalseId" class="geotabSwitchButton" name="asd"/>
+                    <label for="colorPicker_DisplayedFalseId">Not visible</label>
+                    <input type="radio" id="colorPicker_DisplayedTrueId" class="geotabSwitchButton" name="asd"/>
+                    <label for="colorPicker_DisplayedTrueId">Visible</label>
                   </div>
-              </li>
-              <li class="geotabOptionsMenuElement">
-                  <label for="corridorWidth">Route Corridor Width (m)</label>
-                  <div class="geotabOptionsMenuElementValue">
-                      <input type="number"
-                             id="corridorWidth"
-                             class="zen-input checkmateFormEditField"
-                             min="10" max="5000" step="10"
-                             ng-model="corridorWidthValue"
-                             title="Buffer on each side of the route in meters. Default: 100 m = 200 m total corridor width." />
-                      <small class="zen-text--secondary">Applies to LineString (route) geometries only.</small>
-                  </div>
-              </li>
-              <li class="geotabOptionsMenuElement">
-                  <label for="stoppedInsideZones">Indicate stops within zone</label>
-
-                  <div class="geotabOptionsMenuElementValue">
-                      <span class="horizontalButtonSet">
-                          <input type="checkbox" id="stoppedInsideZones" checked="checked" class="geotabSwitchButton"
-                                 ng-click="changeZoneStop($event)"/>
-                          <label class="geo-button" for="stoppedInsideZones">Yes</label>
-                          <input type="checkbox" id="stoppedInsideZonesNo" class="geotabSwitchButton"
-                                 ng-click="changeZoneStop($event)"/>
-                          <label class="geo-button" for="stoppedInsideZonesNo">No</label>
-                      </span>
-                  </div>
-              </li>
-              <li class="geotabOptionsMenuElement">
-                  <button class="geo-button geo-button--action zen-button zen-button--primary" ng-click="applyOptions()">Apply</button>
-                  <button class="geo-button zen-button" ng-click="setDefaultOptions()">Set defaults</button>
-              </li>
-          </ul>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li class="geotabOptionsMenuElement">
+            <label for="corridorWidth">Route Corridor Width (m)</label>
+            <div class="geotabOptionsMenuElementValue">
+              <input type="number"
+                     id="corridorWidth"
+                     class="checkmateFormEditField"
+                     min="10" max="5000" step="10"
+                     ng-model="corridorWidthValue"
+                     title="Buffer on each side of the route in meters. Default: 100 m = 200 m total corridor width."/>
+              <small class="zen-text--secondary">Applies to LineString (route) geometries only.</small>
+            </div>
+          </li>
+          <li class="geotabOptionsMenuElement">
+            <label for="stoppedInsideZones">Indicate stops within zone</label>
+            <div class="geotabOptionsMenuElementValue">
+              <span class="horizontalButtonSet">
+                <input type="checkbox" id="stoppedInsideZones" checked="checked"
+                       class="geotabSwitchButton" ng-click="changeZoneStop($event)"/>
+                <label for="stoppedInsideZones">Yes</label>
+                <input type="checkbox" id="stoppedInsideZonesNo"
+                       class="geotabSwitchButton" ng-click="changeZoneStop($event)"/>
+                <label for="stoppedInsideZonesNo">No</label>
+              </span>
+            </div>
+          </li>
+          <li class="geotabOptionsMenuElement">
+            <button class="kml-btn kml-btn--primary" ng-click="applyOptions()">Apply</button>
+            <button class="kml-btn kml-btn--text" ng-click="setDefaultOptions()">Set defaults</button>
+          </li>
+        </ul>
       </modal-dialog>
-  </div>
+    </div>
 
-  <div id="imporKMLZonesFormContainer" class="extern" style="margin-top: 20px;" ng-controller='parsedDataController'>
-      <div class="zen-upload-area dragAndDropUploader uploaderElementsContainer">
-          <span class="zen-upload-area__title dragAndDropTitle">{{uploaderTitle}}</span>
-          <span class="zen-upload-area__subtitle">Accepts .kml from Google My Maps — including route (LineString) exports</span>
-          <input class="uploadFileElement" type="file" multiple="true" ng-model="upload"
-                 onchange="angular.element(this).scope().uploadFiles(event)" onclick="this.value = null;">
+    <!-- Upload + table area -->
+    <div id="imporKMLZonesFormContainer" class="extern" ng-controller="parsedDataController">
+
+      <!--
+        IMPORTANT: .dragAndDropUploader is required by uploader.js
+        (getElementsByClassName("dragAndDropUploader")[0]) — do not remove it.
+      -->
+      <div class="dragAndDropUploader uploaderElementsContainer">
+        <span class="material-symbols-rounded kml-upload-icon">upload_file</span>
+        <span class="dragAndDropTitle">{{uploaderTitle}}</span>
+        <span class="kml-upload-hint">Accepts .kml from Google My Maps — including route (LineString) exports</span>
+        <!--
+          Must be the first <input> inside the upload box.
+          uploader.js: dragAndDropArea.getElementsByTagName("input")[0]
+        -->
+        <input class="uploadFileElement" type="file" multiple="true"
+               ng-model="upload"
+               onchange="angular.element(this).scope().uploadFiles(event)"
+               onclick="this.value = null;">
       </div>
 
-      <div class="errorMessage zen-banner zen-banner--error" id="errorMessage" style="display: none;">
-
-      </div>
+      <!-- Error message -->
+      <div class="errorMessage" id="errorMessage" style="display: none;"></div>
 
       <div>
-          <div id="progressContainer" style="display: none;">
-              <progress max="100" value="0" id="importProgress"></progress>
-          </div>
-          <div class="importToolbar" style="width: 100%; padding: 10px 0 0 0; text-align: right;">
-              <button class="geo-button zen-button" ng-click="exportKML()" id="exportKML" style="display: none;">Save not
-                  imported zones to kml file
-              </button>
-              <input type="checkbox" class="geotabSwitchButton" id="hideImported" ng-click="hideImported($event)">
-              <label class="geo-button zen-button" for="hideImported" id="hideImportedLabel" style="display: none;">Hide imported</label>
-              <button class="geo-button geo-button--action zen-button zen-button--primary" ng-click="importSelectedZones()" id="importButton"
-                      style="display: none;">Import selected zones
-              </button>
-              <input type="checkbox" class="geotabSwitchButton" id="selectAll" ng-click="selectAll($event)">
-              <label class="geo-button zen-button" for="selectAll" id="selectAllLabel" style="display: none;">Select all</label>
-          </div>
-          <div id="polygonList" style="display: none;">
-              <table class="checkmateListTable">
-                  <thead>
-                  <th colspan="4">Polygon &amp; Route Corridor Zones</th>
-                  </thead>
-                  <tbody>
-                  <tr>
-                      <td width="40%">Name</td>
-                      <td width="40%">Description</td>
-                      <td width="5%">Color</td>
-                      <td width="15%">Select zones for import</td>
-                  </tr>
-                  </tbody>
-              </table>
-          </div>
+        <!-- Progress bar -->
+        <div id="progressContainer" style="display: none;">
+          <progress max="100" value="0" id="importProgress"></progress>
+        </div>
 
-          <div id="pointList" style="display: none;">
-              <table class="checkmateListTable">
-                  <thead>
-                  <th colspan="4">Point Zones</th>
-                  </thead>
-                  <tbody>
-                  <tr>
-                      <td width="40%">Name</td>
-                      <td width="40%">Description</td>
-                      <td width="5%">Color</td>
-                      <td width="20%">Select zones for import</td>
-                  </tr>
-                  </tbody>
-              </table>
-          </div>
+        <!-- Import toolbar -->
+        <div class="importToolbar">
+          <button class="kml-btn kml-btn--text" ng-click="exportKML()"
+                  id="exportKML" style="display: none;">Save not imported zones to KML</button>
+          <input type="checkbox" class="geotabSwitchButton" id="hideImported" ng-click="hideImported($event)">
+          <label class="kml-btn kml-btn--text" for="hideImported"
+                 id="hideImportedLabel" style="display: none;">Hide imported</label>
+          <input type="checkbox" class="geotabSwitchButton" id="selectAll" ng-click="selectAll($event)">
+          <label class="kml-btn kml-btn--text" for="selectAll"
+                 id="selectAllLabel" style="display: none;">Select all</label>
+          <button class="kml-btn kml-btn--primary" ng-click="importSelectedZones()"
+                  id="importButton" style="display: none;">Import selected zones</button>
+        </div>
+
+        <!--
+          IMPORTANT: .checkmateListTable is used by kml.js
+          querySelectorAll(".checkmateListTable .error") — do not remove.
+        -->
+        <div id="polygonList" style="display: none;">
+          <table class="checkmateListTable">
+            <thead>
+              <tr><th colspan="4">Polygon &amp; Route Corridor Zones</th></tr>
+              <tr>
+                <th style="width:40%">Name</th>
+                <th style="width:35%">Description</th>
+                <th style="width:10%">Color</th>
+                <th style="width:15%">Select zones for import</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div id="pointList" style="display: none;">
+          <table class="checkmateListTable">
+            <thead>
+              <tr><th colspan="4">Point Zones</th></tr>
+              <tr>
+                <th style="width:40%">Name</th>
+                <th style="width:35%">Description</th>
+                <th style="width:10%">Color</th>
+                <th style="width:15%">Select zones for import</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
+    </div>
+
+    <div id="waiting" style="display: none;"></div>
   </div>
-  <div id="waiting" style="display: none;"></div>
-</div>
-<script type="text/javascript">
-  geotab.addin.importKmlZones = function (api, state) {
+
+  <script type="text/javascript">
+    geotab.addin.importKmlZones = function (api, state) {
       return {
-          initialize: function (api, state, callback) {
-              callback();
-              angularObj.initAngular();
-              kml.initVariables(api, state);
-              angular.bootstrap(document.getElementById("importKmlZones"), ["importKMLZones"]);
-              if (typeof FileReader === "undefined") {
-                  alert("Your browser does not support file uploader. Please, use another one.");
-              } else if (kml.isFormDataSupported) {
-                  kml.uploader.init();
-              }
-          },
-          focus: function () {
-              kml.filter = state.getGroupFilter();
-              kml.updateImportedInBG();
-          },
-          blur: function () {
+        initialize: function (api, state, callback) {
+          callback();
+          angularObj.initAngular();
+          kml.initVariables(api, state);
+          angular.bootstrap(document.getElementById("importKmlZones"), ["importKMLZones"]);
+          if (typeof FileReader === "undefined") {
+            alert("Your browser does not support file uploader. Please, use another one.");
+          } else if (kml.isFormDataSupported) {
+            kml.uploader.init();
           }
+        },
+        focus: function () {
+          kml.filter = state.getGroupFilter();
+          kml.updateImportedInBG();
+        },
+        blur: function () {
+        }
       };
-  };
-</script>
+    };
+  </script>
 
 </body>
 
