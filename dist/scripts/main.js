@@ -1,1 +1,1874 @@
-"use strict";var angularObj={app:null,initAngular:function(){var r=document.getElementById("importKmlZones");angularObj.app=angular.module("importKMLZones",[]),angularObj.app.directive("modalDialog",function(){return{restrict:"E",scope:{show:"="},replace:!0,transclude:!0,link:function(e,t,n){e.dialogStyle={},n.width&&(e.dialogStyle.width=n.width),n.height&&(e.dialogStyle.height=n.height),e.hideModal=function(){e.show=!1,r.style.overflow="",r.style.height="auto"}},template:"<div class='ng-modal' ng-show='show'><div class='ng-modal-overlay' ng-click='hideModal()'></div><div class='ng-modal-dialog' ng-style='dialogStyle'><div class='ng-modal-close' ng-click='hideModal()'>X</div><div class='ng-modal-dialog-content' ng-transclude></div></div></div>"}}),angularObj.app.service("clearService",function(){var e={clear:function(){kml.clear()}};return e}),angularObj.app.controller("optionsController",["$scope","clearService",function(n,e){n.modalShown=!1,n.toggleModal=function(){var t=function(e){n.zoneTypeOptions=[],kml.prevSelectedTypes=[],e.forEach(function(e){n.zoneTypeOptions.push({id:e.id,name:e.name,isSystem:!!e.isSystem&&e.isSystem,comment:e.comment?e.comment:""})}),n.$apply(),kml.options.zoneTypes.every(function(e,t){var n=r.querySelector("#typesSelect");return e!==kml.defaultZoneType||-1!==n.selectedIndex||(n.selectedIndex=t,!1)})};kml.api.call("Get",{typeName:"ZoneType"},function(e){t(kml.addSystemZoneTypes(e,!0))},function(){t(kml.addSystemZoneTypes([],!0))}),n.colorPickerValue=kml.colorPicker.getPicker().getHexValue(),n.transparencySliderValue=n.transparencySliderValue||kml.colorPicker.getDefaultTransparencyValue(),kml.utils.inputTypeSupport("range","a")&&(r.querySelector(".vanillaSlider").value=n.transparencySliderValue),angular.element(r.querySelector("input.vanillaSlider")).on("input",function(e){var t=e.target.value;n.transparencySliderValue=Number(t),kml.colorPicker.getTransparencyControl().set({a:t}),r.querySelector("#colorPickerField").style.opacity=(100-t)/100,n.$apply()});var e=r.querySelector("#colorPickerField");kml.utils.inputTypeSupport("color","hello world")?angular.element(e).on("change",function(){kml.colorPicker.getPicker().setValue(kml.utils.hexToRGBArray(this.value))}):(angular.element(e).on("focus",function(){kml.colorPicker.getPicker().originalPicker.showPicker(this)}),angular.element(e).on("blur",function(){var e=kml.colorPicker.getPicker().originalPicker.valueElement.value;!1===kml.colorPicker.getPicker().originalPicker.pickerIsActive?kml.colorPicker.getPicker().originalPicker.hidePicker():(n.colorPickerValue=e,this.value=e,this.style.backgroundColor=e,n.$apply(),this.focus())})),n.modalShown=!n.modalShown,!0===n.modalShown&&(r.style.overflow="hidden",r.style.height="100%")},n.setQuickColor=function(e){n.colorPickerValue=kml.colorPicker.setQuickColor(e)},n.changeZoneStop=function(e){e.target.checked||e.preventDefault();for(var t=e.target.parentNode.querySelectorAll(".geotabSwitchButton"),n=0;n<t.length;n++)t[n].id!==e.target.id&&(t[n].checked=!1);e.target.checked=!0},n.applyOptions=function(){kml.applyOptions(),r.style.overflow="",r.style.height="auto",n.modalShown=!1},n.setDefaultOptions=function(){kml.setDefaultOptions(),n.colorPickerValue=kml.colorPicker.getDefaultColorHex(),n.transparencySliderValue=kml.colorPicker.getDefaultTransparencyValue(),kml.utils.inputTypeSupport("range","a")&&(r.querySelector(".vanillaSlider").value=n.transparencySliderValue)},n.clear=function(){e.clear()},n.selectType=function(e){var t,n=null,o=r.querySelector("#typesSelect");for(kml.prevSelectedTypes=kml.prevSelectedTypes||[],setTimeout(function(){for(t=0;t<kml.prevSelectedTypes.length;t++)o.options[kml.prevSelectedTypes[t]].selected=!0;null!==n&&(o.options[n].selected=!1)},0),kml.selectedTypes=o.selectedOptions||kml.utils.getSelectValues(o),t=0;t<kml.selectedTypes.length;t++)-1===kml.prevSelectedTypes.indexOf(kml.selectedTypes[t].index)&&kml.prevSelectedTypes.push(kml.selectedTypes[t].index);e.target.selected?(n=e.target.index,kml.prevSelectedTypes.splice(kml.prevSelectedTypes.indexOf(n),1)):n=null}}]),angularObj.app.controller("parsedDataController",["$scope","clearService",function(e,n){e.uploaderTitle=kml.isFormDataSupported?"Drop your files here or click to select them":"Click here to choose kml file",e.importSelectedZones=function(){kml.importZones()},e.hideImported=function(e){kml.hideImported(e)},e.exportKML=function(){kml.exportKML()},e.selectAll=function(e){kml.selectAll(e)},e.uploadFiles=function(e){var t=e.target.files;n.clear(),kml.parseFiles(t)}}])}};function _typeof(e){return(_typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function(e){return typeof e}:function(e){return e&&"function"==typeof Symbol&&e.constructor===Symbol&&e!==Symbol.prototype?"symbol":typeof e})(e)}!function(){var e={api:null,state:null,args:{},item:null,childCallback:{},minDate:new Date(Date.UTC(1986,0,1)),defaultZoneSize:200,localInit:["addressLookup","Address Lookup","customer","Customer","office","Office","home","Home"],isFormDataSupported:!!window.FormData,fileReader:null,filter:null,colorPickerObj:null,zoneCreator:null,options:{},zonesData:{zones:[],commonStyles:[]},uploader:null,utils:null,colorPicker:null,vanillaSlider:null,waiting:null,importedInBG:[],itemsPerCall:50,defaultZoneType:"ZoneTypeCustomerId",initVariables:function(e,t){var n=this;this.api=e,this.state=t,this.args.container=document.getElementById("importKmlZones"),this.local=this.setupLocal(this.localInit),this.filter=t.getGroupFilter(),this.utils=new Utils,this.fileReader="undefined"!=typeof FileReader?new FileReader:null,this.uploader=new Uploader,this.vanillaSlider=new VanillaSlider,this.waiting=new Waiting,Array.prototype.forEach.call(this.args.container.parentNode.getElementsByClassName("extern"),function(e){e.id&&(n.args[e.id]=e)}),this.colorPicker=new ColorPicker,this.colorPickerObj=this.colorPicker.formColorPicker(),this.zoneCreator=this.zoneShapeCreator(),this.options={zoneTypes:[this.defaultZoneType],zoneSize:this.defaultZoneSize,zoneColor:this.colorPickerObj.value(),zoneShape:!1,stoppedInsideZones:this.args.container.querySelector("#stoppedInsideZones").checked}},NOOP:function(){},setupLocal:function(e){var t,n,o={};if(e.length%2!=0)throw new Error("incorrect data items");for(t=0;t<e.length;t+=2){if(o[n=e[t]])throw new Error(n+" already added");o[n]=e[t+1]}return o},addSystemZoneTypes:function(e,t){var n,o,r,l,i={ZoneTypeAddressLookupId:this.local.addressLookup,ZoneTypeCustomerId:this.local.customer,ZoneTypeOfficeId:this.local.office,ZoneTypeHomeId:this.local.home},a=!1;for(n=0,o=e.length;n<o;n+=1)r=(l=e[n]).id||l,l.id||(t&&"ZoneTypeAddressLookupId"===r?(e.splice(n,1),n-=1,o-=1):(a=!0,e[n]={id:l,name:i[r],isSystem:!0}));if(!a)for(var s in i)!i.hasOwnProperty(s)||t&&"ZoneTypeAddressLookupId"===s||e.push({id:s,name:i[s],comment:this.localInit.systemAssignedComment,isSystem:!0});return e},zoneShapeCreator:function(){return{getZonePoints:function(e,t,n,o){var r=n?360*n/40075e3:.0018;return o?function(e,t,n){var o,r,l,i=n/2,a=i-8e-5/n*n,s=2*Math.sqrt(i*i-a*a),c=Math.ceil(Math.PI/Math.asin(s/(2*i))),u=c<20?20:c+1,d=2*Math.PI/(u-1),p=0,m=[];for(l=0;l<u;l++)r=e+i*Math.cos(p),o=t+i*Math.sin(p)/Math.abs(Math.cos(r*Math.PI/180)),m.push({x:o,y:r}),p+=d;return m}(e,t,r):function(e,t,n){var o,r=n/2||9e-4,l=[[1,1],[-1,1],[-1,-1],[1,-1]],i=[];for(o=0;o<l.length;o++)i.push({x:t+l[o][0]*r,y:e+l[o][1]*r/1.5});return i}(e,t,r)}}},parseFiles:function(i){var a=this,s=i.length,c=0;0!==s&&(this.waiting.show(),this.fileReader.onload=function(e){var t,n,o,r=e.target.result,l=(new DOMParser).parseFromString(r,"text/xml");if(a.isFileDataValid(l,i[c].name)){for(t=l.documentElement.querySelectorAll("Placemark"),n=l.documentElement.querySelectorAll("Style"),o=0;o<t.length;o++)a.zonesData.zones.push(t[o]);for(o=0;o<n.length;o++)n[o].id&&(a.zonesData.commonStyles[n[o].id]=n[o])}++c<s?a.fileReader.readAsText(i[c]):c===s&&a.populateZoneTables(),a.waiting.hide()},this.fileReader.readAsText(i[0]))},isFileDataValid:function(e,t){var n=e.documentElement.querySelector("Placemark");return"kml"===e.documentElement.tagName.toLowerCase()&&n?0===n.getElementsByTagName("name").length?(this.utils.showError("Name field required in "+t+"."),!1):!(!this.isPoint(n)&&!this.isPolygon(n))||(this.utils.showError(t+" must content a point or polygon data."),!1):(this.utils.showError("File '"+t+"' content format is incorrect."),!1)},populateZoneTables:function(){var s=this,c=!1;this.zonesData.zones.forEach(function(e,t){e.zoneParameters=s.getZoneParameters(e);var n,o,r,l,i=e.zoneParameters.isPolygon?s.args.container.querySelector("#polygonList table"):s.args.container.querySelector("#pointList table"),a=function(e){var t,n={valid:!0,message:""},o=function(e,t,n){return!!(!isNaN(e)&&t<=e&&e<=n)};for(0===e.name.length&&(n.valid=!1,n.message+="Zone name can not be empty. "),0===e.points.length&&(n.valid=!1,n.message+="Zone coordinates can not be empty. "),t=0;t<e.points.length;t++)o(e.points[t].y,-90,90)||(n.valid=!1,n.message+="Latitude coordinate value = "+e.points[t].y+" is incorrect. "),o(e.points[t].x,-180,180)||(n.valid=!1,n.message+="Longitude coordinate value = "+e.points[t].x+" is incorrect. ");return n}(e.zoneParameters);"none"===i.parentNode.style.display&&(i.parentNode.style.display=""),(n=document.createElement("tr")).id="row"+t,o=document.createElement("td"),i.querySelector("tbody").appendChild(n),n.appendChild(o),o.textContent=e.zoneParameters.name,(o=o.cloneNode()).textContent=e.zoneParameters.comment||"-",n.appendChild(o),o=o.cloneNode(),e.zoneParameters.colorFromOptions?o.textContent="Set by options.":((l=document.createElement("div")).className="colorDiv",l.style.backgroundColor=s.utils.rgbToHex.apply(s.utils,s.utils.colorObjToArr(e.zoneParameters.fillColor)),l.style.opacity=e.zoneParameters.fillColor.a/255,o.appendChild(l)),n.appendChild(o),o=o.cloneNode(),!0===a.valid?(c=!0,(r=document.createElement("input")).type="checkbox",r.id=t,r.className="importCheckbox",r.checked=!0,o.appendChild(r)):(n.className="error",s.args.container.querySelector("#exportKML").style.display="",o.textContent=a.message),n.appendChild(o)}),!0===c&&(this.args.container.querySelector("#importButton").style.display="",this.args.container.querySelector("#selectAll").checked=!0,this.args.container.querySelector("#selectAllLabel").style.display="")},isPoint:function(e){var t=e.getElementsByTagName("Point");return 0<t.length&&0<t[0].getElementsByTagName("coordinates").length},isPolygon:function(e){var t=e.getElementsByTagName("Polygon"),n=0<t.length?t[0].getElementsByTagName("outerBoundaryIs"):[],o=0<n.length?n[0].getElementsByTagName("LinearRing"):[];return 0<t.length&&0<n.length&&0<o.length&&0<o[0].getElementsByTagName("coordinates").length},getZoneParameters:function(e){var t,n=e.getElementsByTagName("description"),o=0<e.getElementsByTagName("Style").length?e.getElementsByTagName("Style")[0]:null,r=0<e.getElementsByTagName("styleUrl").length?e.getElementsByTagName("styleUrl")[0].textContent.replace("#",""):null,l=r?this.zonesData.commonStyles[r]:null,i=o||l,a=!0;if(i){var s=i.getElementsByTagName("PolyStyle"),c=s&&0<s.length?s[0].querySelector("color"):null,u=c?c.textContent.replace("#","").trim():null;if(u){var d=u.slice(-2)+u.slice(4,6)+u.slice(2,4),p=u.slice(0,2),m=this.utils.hexToRGBArray(d);a=!(t={r:m[0],g:m[1],b:m[2],a:parseInt(p,16)})}}return{activeFrom:this.minDate,activeTo:new Date(2050,0,1),comment:0<n.length?this.utils.decodeHTMLEntities(n[0].textContent):"",displayed:!0,externalReference:"",fillColor:a?this.options.zoneColor:t,colorFromOptions:a,groups:this.filter,name:this.utils.decodeHTMLEntities(e.getElementsByTagName("name")[0].textContent.trim()),points:this.getPoints(e),zoneTypes:this.options.zoneTypes,zoneSize:this.options.zoneSize,zoneShape:this.options.zoneShape,mustIdentifyStops:this.options.stoppedInsideZones,isPolygon:this.isPolygon(e),isPoint:this.isPoint(e)}},getPoints:function(e){var t="",r=[],l=function(e,t,n,o){var r=function(e){return e*(Math.PI/180)},l=r(n-e),i=r(o-t),a=Math.sin(l/2)*Math.sin(l/2)+Math.cos(r(e))*Math.cos(r(n))*Math.sin(i/2)*Math.sin(i/2);return 6371*(2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)))};if(this.isPoint(e))t=e.querySelector("coordinates").textContent,r=this.zoneCreator.getZonePoints(1*t.split(",")[1],1*t.split(",")[0],this.options.zoneSize,this.options.zoneShape);else if(this.isPolygon(e)){var n=e.getElementsByTagName("Polygon")[0],o=n.getElementsByTagName("outerBoundaryIs"),i=n.getElementsByTagName("innerBoundaryIs");if(0<o.length&&0<i.length){var a=o[0].querySelector("coordinates"),s=i[0].querySelector("coordinates"),c=a.textContent.trim().split(/\s/),u=s.textContent.trim().split(/\s/),d=null,p=0,m=0,h=function(e,t,n){for(var o=e;o<t;o++)0<n[o].length&&r.push({x:n[o].split(",")[0],y:n[o].split(",")[1]})};c.forEach(function(n,o){0<n.length&&(n=n.split(","),u.forEach(function(e,t){0<e.length&&(e=e.split(","),null===d?d=l(n[0],n[1],e[0],e[1]):d>l(n[0],n[1],e[0],e[1])&&(d=l(n[0],n[1],e[0],e[1]),p=o,m=t))}))}),h(0,p+1,c),h(m,u.length,u),h(1,m+1,u),h(p,c.length,c)}else 0<o.length&&0===i.length&&(t=o[0].querySelector("coordinates")).textContent.trim().split(/\s/).forEach(function(e){0<e.length&&r.push({x:e.split(",")[0],y:e.split(",")[1]})})}return r},markRowSuccess:function(e,t){var n=document.getElementById("row"+e),o=document.createElement("a"),r=document.createElement("button"),l=document.createElement("span");n.className="imported",n.lastChild.textContent="Zone successfully imported.",l.className="geotabButtonIcons iconSearch",r.appendChild(l),r.style.float="right",r.className="geotabButton emptyButton",o.appendChild(r),o.href="#map,zones:!((id:"+t+"))",n.firstChild.appendChild(o)},markRowError:function(e,t){var n=document.getElementById("row"+e);n.className="error",n.lastChild.textContent=t},updateControlsVisibility:function(e){if(!this.args.container)return!1;var t=this.args.container.querySelectorAll(".imported"),n=this.args.container.querySelectorAll(".error");0<t.length&&(this.args.container.querySelector("#hideImportedLabel").style.display=""),0<n.length&&(this.args.container.querySelector("#exportKML").style.display=""),e&&this.args.container.querySelector("#importButton").removeAttribute("disabled"),0===this.args.container.getElementsByClassName("importCheckbox").length&&(this.args.container.querySelector("#selectAllLabel").style.display="none")},saveZones:function(n){var r=this,t=[],o=[],l=0,i=0,a=function(e){if(i++,r.waiting.updateProgressBar(100*e/n.length),i===o.length){r.waiting.hideProgressBar();var t=r.args.container.querySelector("#importButton");t&&t.removeAttribute("disabled")}else s(o[i]);r.updateControlsVisibility()},s=function(e){r.api.multiCall(e,function(o){e.every(function(e,t){var n="string"==typeof o?o:o[t];return r.args.container?r.markRowSuccess(e[1].entity.rowId,n):r.importedInBG.push({rowId:e[1].entity.rowId,id:n}),!0}),a(e.length)},function(t){e.every(function(e){return r.args.container?r.markRowError(e[1].entity.rowId,t):r.importedInBG.push({rowId:e[1].entity.rowId,message:t}),!0}),a(e.length)})};0!==n.length?(n.every(function(e){return l<r.itemsPerCall?l++:(o.push(t),t=[],l=1),t.push(["Add",{typeName:"Zone",entity:e}]),!0}),0<t.length&&o.push(t),this.args.container.querySelector("#importButton").setAttribute("disabled","disabled"),this.waiting.showProgressBar(),s(o[0])):alert("No selected zones to import.")},updateImportedInBG:function(){var t=this;this.importedInBG.every(function(e){return void 0!==e.id?t.markRowSuccess(e.rowId,e.id):void 0!==e.message&&t.markRowError(e.rowId,e.message),!0}),this.updateControlsVisibility(!0),this.importedInBG=[]},importZones:function(){for(var e=this.args.container.getElementsByClassName("importCheckbox"),t=[],n=0;n<e.length;n++)e[n].checked&&(t.push(this.zonesData.zones[e[n].id].zoneParameters),t[t.length-1].rowId=e[n].id);this.saveZones(t)},hideImported:function(e){var t,n=this.args.container.getElementsByClassName("imported");if(!0===e.currentTarget.checked)for(t=0;t<n.length;t++)n[t].style.display="none";else for(t=0;t<n.length;t++)n[t].style.display=""},exportKML:function(){var e,t,o=this,n=this.args.container.querySelectorAll(".checkmateListTable .error"),r="",l="download"in document.createElement("a"),i=window.BlobBuilder||window.WebKitBlobBuilder||window.MozBlobBuilder||window.MSBlobBuilder;for(e=0;e<n.length;e++){var a=this.zonesData.zones[n[e].id.replace("row","")];r+=(new XMLSerializer).serializeToString(a)}r='<?xml version="1.0" encoding="UTF-8"?>\n<kml>'+r+"</kml>",navigator.saveBlob=navigator.saveBlob||navigator.msSaveBlob||navigator.mozSaveBlob||navigator.webkitSaveBlob,window.saveAs=window.saveAs||window.webkitSaveAs||window.mozSaveAs||window.msSaveAs,i&&(window.saveAs||navigator.saveBlob)?t=function(e,t){var n,o=new i;o.append(e),n=o.getBlob("text/plain; charset=UTF-8"),window.saveAs?window.saveAs(n,t):navigator.saveBlob(n,t)}:l&&(t=function(e,t){var n=document.createElement("a");n.setAttribute("href","data:text/plain;charset=utf-8,"+encodeURIComponent(r)),n.setAttribute("download",t),n.style.display="none",o.args.container.appendChild(n),n.click(),o.args.container.removeChild(n)}),t?t(r,"not_imported.kml"):alert("Your browser does not support any method of saving JavaScript gnerated data to files.")},selectAll:function(e){var t,n=document.getElementsByClassName("importCheckbox");for(t=0;t<n.length;t++)n[t].checked=!!e.currentTarget.checked},clearDataTables:function(){var r=this,e=function(e){var t=r.args.container.querySelector("#"+e+" table"),n=t.querySelectorAll("tr");if(2<n.length)for(var o=2;o<n.length;o++)n[o].parentNode.removeChild(n[o]);"none"!==t.parentNode.style.display&&(t.parentNode.style.display="none",r.args.container.querySelector("#importButton").style.display="none",r.args.container.querySelector("#hideImportedLabel").style.display="none",r.args.container.querySelector("#progressContainer").style.display="none",r.args.container.querySelector("#exportKML").style.display="none")};e("polygonList"),e("pointList"),this.args.container.querySelector("#selectAll").checked=!1,this.args.container.querySelector("#selectAllLabel").style.display="none",this.utils.hideError()},applyOptions:function(){for(var t=this,n=this.args.container.querySelector("#typesSelect").selectedOptions||this.utils.getSelectValues(this.args.container.querySelector("#typesSelect")),o=[],e=this.args.container.querySelector("#optionsControllerElement"),r=angular.element(e).scope().zoneTypeOptions,l=0;l<n.length;l++)r.every(function(e){return e.id!==n[l].value||(o.push(!0===e.isSystem?e.id:e),!1)});this.options.zoneTypes=o,this.options.zoneColor=this.colorPickerObj.value(),this.options.transparencyValue=this.colorPicker.getTransparencyControl().get(),this.options.stoppedInsideZones=this.args.container.querySelector("#stoppedInsideZones").checked,this.zonesData.zones.forEach(function(e){e.zoneParameters=t.getZoneParameters(e)})},setDefaultOptions:function(){for(var e=this.args.container.querySelector("#typesSelect"),t=this.args.container.querySelector("#colorPickerField"),n=0;n<e.options.length;n++)e.options[n].selected=e.options[n].value===this.defaultZoneType;this.colorPicker.setDefaultColor(),t.value=this.colorPicker.getDefaultColorHex(),t.style.opacity=this.colorPicker.getDefaultColor()[3]/255,this.args.container.querySelector("#stoppedInsideZonesNo").checked=!1,this.args.container.querySelector("#stoppedInsideZones").checked=!0},clear:function(){this.uploader.clear(),this.zonesData.zones=[],this.zonesData.commonStyles=[],this.clearDataTables()}},t=function(){return this||(0,eval)("this")}();"undefined"!=typeof module&&module.exports?module.exports=e:"function"==typeof define&&define.amd?define(function(){return e}):t.kml=e}(),function(){var e=function(){var o,r,c,u,l,i,d,a={path:!0,circle:!0,svg:!0,rect:!0,text:!0};return{vanilla:(o=function(e){var t="string"==typeof e.className?e:e.className,n="string"==typeof e.className?"className":"baseVal";return{get:function(){return t[n]},set:function(e){t[n]=e}}},r=function(e,t){if(e.classList)e.classList.add(t);else{var n=o(e);n.get().indexOf(t)<0&&n.set(n.get()+(n.get()?" ":"")+t)}},c=function(e){return-1!==Object.prototype.toString.call(e).indexOf("Array")},u=function(e){return-1!==Object.prototype.toString.call(e).indexOf("Object")},l=function(e,t){return e.style.display=t,e},i=function(e){return e.currentStyle?e.currentStyle.display:window.getComputedStyle?window.getComputedStyle(e,null).getPropertyValue("display"):void 0},d={addClasses:function(e,t){var n,o=t.split(" ");for(n=0;n<o.length;n++)r(e,o[n])},hasClass:function(e,t){return-1!==o(e).get().indexOf(t)},css:function(e,t){var n,o;Object.keys(t).forEach((n=e,o=t,function(e){n.style[e]=o[e]}))},create:function(n,e,t){var o,r,l,i=(o=(n||"").toUpperCase(),a.hasOwnProperty(o.toLowerCase())?document.createElementNS("http://www.w3.org/2000/svg",o):document.createElement(o));return e&&Object.keys(e).forEach((r=i,l=e,function(t){try{r.setAttribute(t,l[t])}catch(e){throw new Error("Try to set "+t+" attribute "+l[t]+" to "+r.tagName+" ("+n+"). Connected with this error: "+e.message)}})),t&&d.css(i,t),i},extend:function(){var e,t,n,o,r,l=arguments.length,i=!1,a=arguments[0],s=1;for("boolean"==typeof a&&(i=a,a=arguments[1],s++);s!==l;){for(e=arguments[s],t=Object.keys(e),r=0;r<t.length;r++)n=e[t[r]],i&&(u(n)||c(n))?(o=a[t[r]],o=a[t[r]]=u(o)||c(o)?o:c(n)?[]:{},d.extend(i,o,n)):a[t[r]]=e[t[r]];s++}return a},isArray:c,show:function(e){var t,n,o,r=document.body;return"none"!==i(e)||(l(e,""),"none"===i(e)&&(t=e.nodeName,n=document.createElement(t),r.appendChild(n),"none"===(o=i(n))&&(o="block"),r.removeChild(n),l(e,o))),e},hide:function(e){return l(e,"none")},toggle:function(e,t){t?this.show(e):this.hide(e)},closest:function(e,t){var n=e&&(e.matches||e.webkitMatchesSelector||e.mozMatchesSelector||e.msMatchesSelector);if(n)for(;e&&e!==document.body;){if(n.bind(e)(t))return e;e=e.parentNode}return!1},offset:function(e){var t,n=0,o=0,r={left:0,top:0};if(null!==e){for(t=e;null!==t;)n+=t.offsetLeft,o+=t.offsetTop,t=t.offsetParent;r.left=n,r.top=o}return r}},d),slider:function(e,n){var t={max:100,min:0,step:5,value:0},T=window.document.body,P=kml.utils.isBrowserSupportTouchEvents(),E=n?Object.keys(n).reduce(function(e,t){return e[t]=n[t],e},t):t,o=(kml.utils.inputTypeSupport("range","a")?function(e){var n=e.appendChild(kml.vanillaSlider.vanilla.create("INPUT",{class:"vanillaSlider",type:"range",max:E.max,min:E.min,step:E.step,value:E.value,"ng-model":"sliderValue"})),t=kml.utils.NOOP;return kml.slider=n,"function"==typeof E.onChange&&(t=E.onChange,n.addEventListener("change",function(e){t.call(this,this.value,e)},!1),n.addEventListener("input",function(e){t.call(this,this.value,e)},!1)),{set:function(e,t){n[e]=t},get:function(e){return n[e]},disable:function(){n.setAttribute("disabled","disabled")},enable:function(){n.removeAttribute("disabled")}}}:function(n){var o,r=kml.utils.NOOP,l=n.appendChild(kml.vanillaSlider.vanilla.create("SPAN",{class:"vanillaSliderElement"})),i=l.offsetWidth/2,a=n.offsetWidth,s=0,c=0,u=E.max,d=E.min,p=E.step,t=u-d,m=t/p,h=a/m,f=function(e){var t=document.createEvent("Event");return t.initEvent(e,!0,!1),t},g=function(e,t){var n=h&&Math.round(Math.abs(e)/h)*p,o="number"==typeof t?t:s;return n&&(c=e<0?Math.max(d,o-n):Math.min(u,o+n),c=Math.round(c/p)*p,y(c),r.call(l,c)),c},y=function(e){l.style.left=(e-d)/t*100+"%"},v={start:P?"touchstart":"mousedown",move:P?"touchmove":"mousemove",end:P?"touchend":"mouseup"},k=0,e=function(e){g(e.pageX-k)},S=function(e){var t;e.target!==l&&(t=this.getBoundingClientRect(),h=t.width/m,s=g(e.pageX-t.left,0))},b=function(e){var t;if("changedTouches"in e){if(1!==e.changedTouches.length)return!0;t=e.changedTouches[0]}else t=e;return o[e.type].call(this,t,e)},w=function(){s=c,l.dispatchEvent(f("blur")),T.removeEventListener(v.move,b,!1),T.removeEventListener(v.end,b,!1)},C=function(e,t){t.preventDefault(),k=e.pageX,a=n.offsetWidth,h=a/m,i=l.offsetWidth/2,l.dispatchEvent(f("focus")),T.addEventListener(v.move,b,!1),T.addEventListener(v.end,b,!1)};return o={mousedown:C,touchstart:C,mousemove:e,touchmove:e,mouseup:w,touchend:w},kml.vanillaSlider.vanilla.addClasses(n,"vanillaSlider"),l.addEventListener(v.start,b,!1),n.addEventListener("click",S,!1),l.style.left=-i+"px","function"==typeof E.onChange&&(r=E.onChange),E.value&&(s=Math.max(Math.min(E.value,u),d),y(s)),{set:function(e,t){s=Math.max(Math.min(t,u),d),y(s),r.call(l,s)},get:function(){return s},disable:function(){l.removeEventListener(v.start,b,!1),n.removeEventListener("click",S,!1),w()},enable:function(){l.addEventListener(v.start,b,!1),n.addEventListener("click",S,!1)}}})(e),r=!1;return{getValue:function(){return o.get("value")},setValue:function(e){return e<E.min&&(e=E.min),e>E.max&&(e=E.max),o.set("value",e),e},disable:function(){r||(o.disable(),r=!0)},enable:function(){r&&(o.enable(),r=!1)}}}}},t=function(){return this||(0,eval)("this")}();"undefined"!=typeof module&&module.exports?module.exports=e:"function"==typeof define&&define.amd?define(function(){return e}):t.VanillaSlider=e}(),function(){var e=function(){var t=kml.args.container.querySelector("#errorMessage");return{inputTypeSupport:function(e,t){var n=document.createElement("input");return n.setAttribute("type",e),n.setAttribute("value",t),n.type===e&&n.value!==t},isBrowserSupportTouchEvents:function(){var t=!0;try{document.createEvent("TouchEvent")}catch(e){t=!1}return t},colorObjToArr:function(e){return Array.isArray(e)?e:[e.r,e.g,e.b,e.a]},rgbToHex:function(e,t,n){return"object"===_typeof(e)?kml.rgbToHex.apply(this,[e.r,e.g,e.b]):"#"+[e,t,n].map(function(e){var t=(e||0).toString(16);return t.length<2?"0"+t:t}).join("")},hexToRGBArray:function(e){var t=this.normalizeHexColor(e),n=function(e){return parseInt(t.slice(e,e+2),16)};return[n(0),n(2),n(4)]},normalizeHexColor:function(e){return e.replace("#","").replace(/^(.)(.)(.)$/,"$1$1$2$2$3$3")},showError:function(e){t.textContent=e,t.style.display=""},hideError:function(){"none"!==t.style.display&&(t.style.display="none")},getSelectValues:function(e){for(var t,n=[],o=e&&e.options,r=0,l=o.length;r<l;r++)(t=o[r]).selected&&n.push({value:t.value});return n},decodeHTMLEntities:function(e){var t=document.createElement("a");return e&&"string"==typeof e&&(e=e.replace(/&amp;nbsp;/g,"")),t.innerHTML=e,t.textContent}}},t=function(){return this||(0,eval)("this")}();"undefined"!=typeof module&&module.exports?module.exports=e:"function"==typeof define&&define.amd?define(function(){return e}):t.Utils=e}(),function(){var t=this,e=function(){var u=null,d=null,p=null,a=[255,69,0,38],m={r:255,g:69,b:0,a:38},r=null,e=function(){var e,t,n,o,r,l,i,a,s,c;u=kml.args.container.querySelector("#colorPicker").querySelectorAll(".quickColorsBox"),p=kml.utils.colorObjToArr(m),e=kml.args.container.querySelector("#colorPicker"),a=e.getElementsByClassName("transparencySlider")[0],s=e.getElementsByClassName("transparencyButtonSet")[0],n=e.getElementsByClassName("transparencySliderValue")[0],o=e.getElementsByClassName("transparencySliderControl")[0],r=kml.vanillaSlider.slider(o,{min:0,max:100,step:5,value:n.textContent=(t=p[3],Math.round(100-100*(t<=1?t:t/255)))}),c={get:function(){return r?Math.round((100-r.getValue())/100*255):0},set:function(e){r.setValue((e.a?e.a:e[3])||0)}},l=a,(i=s).parentNode.removeChild(i),l.style.display="block",d=c};return{getDefaultColor:function(){return a},getDefaultColorHex:function(){return"#FF4500"},getTransparencyControl:function(){return d},getDefaultTransparencyValue:function(){return 85},getPicker:function(){return r},setVariables:e,formColorPicker:function(){e();var n=[],l=function(){return kml.args.container.querySelector("#colorPicker INPUT:not([type='radio'])")},i=function(t){n.forEach(function(e){"change"===e.eventType&&e.callback(t)})};return(r=(kml.utils.inputTypeSupport("color","hello world")?function(){var n=l();return n.type="color",n.addEventListener("change",function(){i(t.value)},!1),{setValue:function(e){var t=kml.utils.rgbToHex.apply(kml,kml.utils.colorObjToArr(e));n.value=t,n.style.opacity=kml.utils.colorObjToArr(e)[3]/255,i(t)},getValue:function(){return kml.utils.hexToRGBArray(n.value)},getHexValue:function(){return n.value}}}:function(){var e=l(),r=new jscolor(e);return r.valueElement.addEventListener("change",function(){i("#"+t.value)},!1),{setValue:function(e){var t=3<e.length?e.slice(0,3):e,n=3<e.length?e.slice(3,4):255*kml.utils.colorObjToArr(a)[3],o=kml.utils.rgbToHex.apply(kml.utils,kml.utils.colorObjToArr(t));r.fromRGB.apply(r,function(e){var t="string"==typeof e?kml.utils.hexToRGBArray(e):e,n=kml.utils.colorObjToArr(t);for(1<Math.max.apply(Math,n)&&(n=n.map(function(e){return void 0===e?1:e/255}));n.length<4;)n.push(0);return n.slice()}(t)),l().style.opacity=n/255,l().style.backgroundColor=o,i(o)},getValue:function(){return(r.rgb||a).map(function(e){return 255*e})},getHexValue:function(){return e.value},originalPicker:r}})()).setValue(p),["#ff4500","#ffa500","#008000","#ffff00","#ADD8E6","#0000ff","#800080"].forEach(function(e){var t=document.createElement("div");t.className="quickColor",t.setAttribute("ng-click","setQuickColor($event)"),t.style.backgroundColor=e,u[0].appendChild(t)}),{value:function(e){var t;return e?(r.setValue(e),d.set(e),e):{r:(t=r.getValue())[0],g:t[1],b:t[2],a:d.get()}},attachEvent:function(e,t){n.push({eventType:e,callback:t})}}},setQuickColor:function(e){if(e.target.style.backgroundColor){var t=e.target.style.backgroundColor,n=t.indexOf("#")<0?/\brgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/g.exec(t).splice(1):kml.utils.hexToRGBArray(t),o=[];o.push(parseInt(n[0],10)),o.push(parseInt(n[1],10)),o.push(parseInt(n[2],10)),o.push(d.get()),r.setValue(o),kml.args.container.querySelector("#colorPickerField").value=r.getHexValue()}},setDefaultColor:function(){r.setValue(a)}}},n=function(){return this||(0,eval)("this")}();"undefined"!=typeof module&&module.exports?module.exports=e:"function"==typeof define&&define.amd?define(function(){return e}):n.ColorPicker=e}(),function(){var e=function(){var n=null,o=null;return{init:function(){n=kml.args.container.getElementsByClassName("dragAndDropUploader")[0],o=n.className;var e=n.getElementsByTagName("input")[0];n.ondragover=function(){return angular.injector(["ng","importKMLZones"]).get("clearService").clear(),n.className=o+" hoverArea",!1},n.ondragleave=function(){return n.className=o,!1},n.ondrop=function(e){e.preventDefault(),n.className=o;var t=e.dataTransfer.files;kml.parseFiles(t)},n.onclick=function(){e.click()}},clear:function(){n.className=o}}},t=function(){return this||(0,eval)("this")}();"undefined"!=typeof module&&module.exports?module.exports=e:"function"==typeof define&&define.amd?define(function(){return e}):t.Uploader=e}(),function(){var e=function(){var e=kml.args.container.querySelector("#waiting"),t=e,n=new Spinner({lines:13,length:24,width:14,radius:42,scale:1,corners:1,color:"#000",opacity:.25,rotate:0,direction:1,speed:1,trail:60,fps:20,zIndex:2e9,className:"spinner",top:"50%",left:"50%",shadow:!1,hwaccel:!1,position:"absolute"}),o=kml.args.container.querySelector("#progressContainer"),r=kml.args.container.querySelector("#importProgress");return{show:function(){e.style.display="",n.spin(t)},hide:function(){e.style.display="none",n.stop()},showProgressBar:function(){o.style.display="",kml.args.container.style.overflow="hidden",kml.args.container.style.height="100%",r.value="0"},hideProgressBar:function(){setTimeout(function(){o&&(o.style.display="none",kml.args.container.style.overflow="",kml.args.container.style.height="auto")},400)},updateProgressBar:function(e){r&&(r.value+=e)}}},t=function(){return this||(0,eval)("this")}();"undefined"!=typeof module&&module.exports?module.exports=e:"function"==typeof define&&define.amd?define(function(){return e}):t.Waiting=e}();
+"use strict";
+var angularObj = {
+    app: null,
+    initAngular: function () {
+        let container = document.getElementById("importKmlZones");
+
+        angularObj.app = angular.module("importKMLZones", []);
+
+        angularObj.app.directive("modalDialog", function () {
+            return {
+                restrict: "E",
+                scope: {
+                    show: "="
+                },
+                replace: true, // Replace with the template below
+                transclude: true, // we want to insert custom content inside the directive
+                link: function (scope, element, attrs) {
+                    scope.dialogStyle = {};
+                    if (attrs.width) {
+                        scope.dialogStyle.width = attrs.width;
+                    }
+                    if (attrs.height) {
+                        scope.dialogStyle.height = attrs.height;
+                    }
+                    scope.hideModal = function () {
+                        scope.show = false;
+                        container.style.overflow = "";
+                        container.style.height = "auto";
+                    };
+                },
+                template: "<div class='ng-modal' ng-show='show'>" +
+                "<div class='ng-modal-overlay' ng-click='hideModal()'></div>" +
+                "<div class='ng-modal-dialog' ng-style='dialogStyle'>" +
+                "<div class='ng-modal-close' ng-click='hideModal()'>X</div>" +
+                "<div class='ng-modal-dialog-content' ng-transclude></div></div></div>"
+            };
+        });
+
+        angularObj.app.service("clearService", function () {
+            var clearService = {};
+            clearService.clear = function () {
+                kml.clear();
+            };
+            return clearService;
+        });
+
+        angularObj.app.controller("optionsController", ["$scope", "clearService", function ($scope, clearService) {
+            $scope.modalShown = false;
+
+            $scope.toggleModal = function () {
+                var showZoneTypes = function (zoneTypes) {
+                    $scope.zoneTypeOptions = [];
+                    kml.prevSelectedTypes = [];
+                    zoneTypes.forEach(function (type) {
+                        $scope.zoneTypeOptions.push({
+                            id: type.id,
+                            name: type.name,
+                            isSystem: type.isSystem ? type.isSystem : false,
+                            comment: type.comment ? type.comment : ""
+                        });
+                    });
+                    $scope.$apply();
+                    //set default type value if selection is empty
+                    kml.options.zoneTypes.every(function (type, index) {
+                        let typesSelect = container.querySelector("#typesSelect");
+                        if (type === kml.defaultZoneType && typesSelect.selectedIndex === -1) {
+                            typesSelect.selectedIndex = index;
+                            return false;
+                        }
+                        return true;
+                    });
+                };
+
+                kml.api.call("Get", {typeName: "ZoneType"}, function (data) {
+                    showZoneTypes(kml.addSystemZoneTypes(data, true));
+                }, function () {
+                    showZoneTypes(kml.addSystemZoneTypes([], true));
+                });
+                $scope.colorPickerValue = kml.colorPicker.getPicker().getHexValue();
+                $scope.transparencySliderValue = $scope.transparencySliderValue ||
+                    kml.colorPicker.getDefaultTransparencyValue();
+                $scope.corridorWidthValue = $scope.corridorWidthValue || kml.options.corridorWidth || kml.defaultCorridorWidth;
+
+                if (kml.utils.inputTypeSupport("range", "a")) {
+                    container.querySelector(".vanillaSlider").value = $scope.transparencySliderValue;
+                }
+                angular.element(container.querySelector("input.vanillaSlider")).on("input", function (event) {
+                    var val = event.target.value;
+                    $scope.transparencySliderValue = Number(val);
+                    kml.colorPicker.getTransparencyControl().set({a: val});
+                    container.querySelector("#colorPickerField").style.opacity = ((100 - val) / 100);
+                    $scope.$apply();
+                });
+
+                var colorPickerField = container.querySelector("#colorPickerField");
+                if (!kml.utils.inputTypeSupport("color", "hello world")) {
+                    angular.element(colorPickerField).on("focus", function () {
+                        kml.colorPicker.getPicker().originalPicker.showPicker(this);
+                    });
+                    angular.element(colorPickerField).on("blur", function () {
+                        var value = kml.colorPicker.getPicker().originalPicker.valueElement.value;
+                        if (kml.colorPicker.getPicker().originalPicker.pickerIsActive === false) {
+                            kml.colorPicker.getPicker().originalPicker.hidePicker();
+                        } else {
+                            $scope.colorPickerValue = value;
+                            this.value = value;
+                            this.style.backgroundColor = value;
+                            $scope.$apply();
+                            this.focus();
+                        }
+                    });
+                } else {
+                    angular.element(colorPickerField).on("change", function () {
+                        kml.colorPicker.getPicker().setValue(kml.utils.hexToRGBArray(this.value));
+                    });
+                }
+                $scope.modalShown = !$scope.modalShown;
+                if ($scope.modalShown === true) {
+                    container.style.overflow = "hidden";
+                    container.style.height = "100%";
+                }
+            };
+            $scope.setQuickColor = function (event) {
+                $scope.colorPickerValue = kml.colorPicker.setQuickColor(event);
+            };
+            $scope.changeZoneStop = function (event) {
+                if (!event.target.checked) {
+                    event.preventDefault();
+                }
+                var checkboxes = event.target.parentNode.querySelectorAll(".geotabSwitchButton");
+                for (var i = 0; i < checkboxes.length; i++) {
+                    if (checkboxes[i].id !== event.target.id) {
+                        checkboxes[i].checked = false;
+                    }
+                }
+                event.target.checked = true;
+            };
+            $scope.applyOptions = function () {
+                kml.applyOptions();
+                container.style.overflow = "";
+                container.style.height = "auto";
+                $scope.modalShown = false;
+            };
+            $scope.setDefaultOptions = function () {
+                kml.setDefaultOptions();
+                $scope.colorPickerValue = kml.colorPicker.getDefaultColorHex();
+                $scope.transparencySliderValue = kml.colorPicker.getDefaultTransparencyValue();
+                $scope.corridorWidthValue = kml.defaultCorridorWidth;
+                if (kml.utils.inputTypeSupport("range", "a")) {
+                    container.querySelector(".vanillaSlider").value = $scope.transparencySliderValue;
+                }
+            };
+            $scope.clear = function () {
+                clearService.clear();
+            };
+            $scope.selectType = function (event) {
+                var i, unselect = null,
+                    typesSelect = container.querySelector("#typesSelect");
+                kml.prevSelectedTypes = kml.prevSelectedTypes || [];
+                setTimeout(function () {
+                    //select all previously selected items
+                    for (i = 0; i < kml.prevSelectedTypes.length; i++) {
+                        typesSelect.options[kml.prevSelectedTypes[i]].selected = true;
+                    }
+                    //unselect current item if already selected
+                    if (unselect !== null) {
+                        typesSelect.options[unselect].selected = false;
+                    }
+                }, 0);
+                kml.selectedTypes = typesSelect.selectedOptions || kml.utils.getSelectValues(typesSelect);
+                for (i = 0; i < kml.selectedTypes.length; i++) {
+                    if (kml.prevSelectedTypes.indexOf(kml.selectedTypes[i].index) === -1) {
+                        kml.prevSelectedTypes.push(kml.selectedTypes[i].index);
+                    }
+                }
+                //if clicked already selected item save it's index to unselect
+                if (event.target.selected) {
+                    unselect = event.target.index;
+                    kml.prevSelectedTypes.splice(kml.prevSelectedTypes.indexOf(unselect), 1);
+                } else {
+                    unselect = null;
+                }
+            };
+        }]);
+        angularObj.app.controller("parsedDataController", ["$scope", "clearService", function ($scope, clearService) {
+            $scope.uploaderTitle = kml.isFormDataSupported ? "Drop your files here or click to select them" : "Click here to choose kml file";
+            $scope.importSelectedZones = function () {
+                kml.importZones();
+            };
+            $scope.hideImported = function (event) {
+                kml.hideImported(event);
+            };
+            $scope.exportKML = function () {
+                kml.exportKML();
+            };
+            $scope.selectAll = function (event) {
+                kml.selectAll(event);
+            };
+            $scope.uploadFiles = function (event) {
+                var files = event.target.files;
+                clearService.clear();
+                kml.parseFiles(files);
+            };
+        }]);
+    }
+};
+(function () {
+    "use strict";
+    var DEG_PER_METER_LAT = 1 / (Math.PI / 180 * 6371000); // ~8.9932e-6 degrees per meter (constant at any latitude)
+    var kml = {
+        api: null,
+        state: null,
+        args: {},
+        item: null,
+        childCallback: {},
+        minDate: new Date(Date.UTC(1986, 0, 1)),
+        defaultZoneSize: 200,
+        defaultCorridorWidth: 100, // meters — buffer on each side of a LineString route
+        localInit: ["addressLookup", "Address Lookup", "customer", "Customer", "office", "Office", "home", "Home"],
+        isFormDataSupported: !!window.FormData,
+        fileReader: null,
+        filter: null,
+        colorPickerObj: null,
+        zoneCreator: null,
+        options: {},
+        zonesData: { zones: [], commonStyles: [] },
+        uploader: null,
+        utils: null,
+        colorPicker: null,
+        vanillaSlider: null,
+        waiting: null,
+        importedInBG: [],
+        itemsPerCall: 50,
+        defaultZoneType: "ZoneTypeCustomerId",
+        initVariables: function (api, state) {
+            this.api = api;
+            this.state = state;
+            this.args.container = document.getElementById("importKmlZones");
+            this.local = this.setupLocal(this.localInit);
+            this.filter = state.getGroupFilter();
+            this.utils = new Utils();
+            this.fileReader = (typeof FileReader !== "undefined") ? new FileReader() : null;
+            this.uploader = new Uploader();
+            this.vanillaSlider = new VanillaSlider();
+            this.waiting = new Waiting();
+            Array.prototype.forEach.call(this.args.container.parentNode.getElementsByClassName("extern"),
+                element => {
+                    if (element.id) {
+                        this.args[element.id] = element;
+                    }
+                });
+            this.colorPicker = new ColorPicker();
+            this.colorPickerObj = this.colorPicker.formColorPicker();
+            this.zoneCreator = this.zoneShapeCreator();
+            this.options = {
+                "zoneTypes": [this.defaultZoneType],
+                "zoneSize": this.defaultZoneSize,
+                "zoneColor": this.colorPickerObj.value(),
+                "zoneShape": false, //is not circle === square by default
+                "stoppedInsideZones": this.args.container.querySelector("#stoppedInsideZones").checked,
+                "corridorWidth": this.defaultCorridorWidth
+            };
+        },
+        NOOP: function () {
+        },
+        setupLocal: function (data) {
+            var i, fixed = {}, item;
+            if (data.length % 2 !== 0) {
+                throw new Error("incorrect data items");
+            }
+            for (i = 0; i < data.length; i += 2) {
+                item = data[i];
+                if (fixed[item]) {
+                    throw new Error(item + " already added");
+                }
+                fixed[item] = data[i + 1];
+            }
+            return fixed;
+        },
+        addSystemZoneTypes: function (a, ignoreAddressLookup) {
+            var zoneTypes = {
+                "ZoneTypeAddressLookupId": this.local.addressLookup,
+                "ZoneTypeCustomerId": this.local.customer,
+                "ZoneTypeOfficeId": this.local.office,
+                "ZoneTypeHomeId": this.local.home
+            },
+                i, ii, tempKey, currentZoneType,
+                systemZonesAdded = false;
+            /*Loops through all types that the instance has and checks to see if the customer type exists. If it does it is assumed that office and home also exist.*/
+            for (i = 0, ii = a.length; i < ii; i += 1) {
+                currentZoneType = a[i];
+                tempKey = currentZoneType.id || currentZoneType;
+                if (!currentZoneType.id) {
+                    if (ignoreAddressLookup && tempKey === "ZoneTypeAddressLookupId") {
+                        a.splice(i, 1);
+                        i -= 1;
+                        ii -= 1;
+                    } else {
+                        systemZonesAdded = true;
+                        a[i] = {
+                            id: currentZoneType,
+                            name: zoneTypes[tempKey],
+                            isSystem: true //TODO: Hack, this should be removed when we change to stiring system types
+                        };
+
+                    }
+                }
+            }
+
+            /*If customer was found it is assumed that home and office also exist and so they are not added again*/
+            if (!systemZonesAdded) {
+                for (var prop in zoneTypes) {
+                    if (zoneTypes.hasOwnProperty(prop) && (!ignoreAddressLookup || prop !== "ZoneTypeAddressLookupId")) {
+                        a.push({
+                            id: prop,
+                            name: zoneTypes[prop],
+                            comment: this.localInit.systemAssignedComment,
+                            isSystem: true
+                        });
+                    }
+                }
+            }
+            return a;
+        },
+        zoneShapeCreator: function () {
+            var squareZoneCreator = function (lat, lng, size) {
+                var halfSide = (size / 2) || 0.0009,
+                    method = [[1, 1], [-1, 1], [-1, -1], [1, -1]],
+                    pointsForSaving = [], i;
+
+                for (i = 0; i < method.length; i++) {
+                    pointsForSaving.push({
+                        x: lng + method[i][0] * halfSide,
+                        y: lat + method[i][1] * halfSide / 1.5
+                    });
+                }
+
+                return pointsForSaving;
+            },
+                circleZoneCreator = function (lat, lng, diameter) {
+                    var size = diameter / 2,
+                        degOfMaxDistance = 0.00008 / diameter,
+                        triangleHeight = size - (degOfMaxDistance * diameter),
+                        polygonSide = Math.sqrt(size * size - triangleHeight * triangleHeight) * 2,
+                        amountOfSides = Math.ceil(Math.PI / Math.asin(polygonSide / (2 * size))),
+                        amountOfPoints = amountOfSides < 20 ? 20 : amountOfSides + 1,
+                        angle = 2 * Math.PI / (amountOfPoints - 1),
+                        currentAngle = 0,
+                        x, y,
+                        points = [], i;
+
+                    for (i = 0; i < amountOfPoints; i++) {
+                        y = lat + (size * Math.cos(currentAngle));
+                        x = lng + ((size * Math.sin(currentAngle)) / Math.abs(Math.cos(y * Math.PI / 180)));
+                        points.push({
+                            x: x,
+                            y: y
+                        });
+                        currentAngle += angle;
+                    }
+                    return points;
+                },
+                metersToDegrees = distance => (360 * distance) / 40075000; //approximately because distance isn't big
+
+            return {
+                getZonePoints: function (lat, lng, diameter, isCircle) {
+                    var degDiameter = diameter ? metersToDegrees(diameter) : 0.0018;
+                    return isCircle ? circleZoneCreator(lat, lng, degDiameter) : squareZoneCreator(lat, lng, degDiameter);
+                }
+            };
+        },
+        parseFiles: function (files) {
+            var filesCount = files.length,
+                filesLoaded = 0;
+            if (filesCount === 0) {
+                return;
+            }
+            this.waiting.show();
+            this.fileReader.onload = e => {
+                var contents = e.target.result,
+                    parser = new DOMParser(),
+                    kmlDom = parser.parseFromString(contents, "text/xml"),
+                    placemarks, commonStyles, i;
+                if (this.isFileDataValid(kmlDom, files[filesLoaded].name)) {
+                    placemarks = kmlDom.documentElement.querySelectorAll("Placemark");
+                    commonStyles = kmlDom.documentElement.querySelectorAll("Style");
+                    for (i = 0; i < placemarks.length; i++) {
+                        this.zonesData.zones.push(placemarks[i]);
+                    }
+                    for (i = 0; i < commonStyles.length; i++) {
+                        if (commonStyles[i].id) {
+                            this.zonesData.commonStyles[commonStyles[i].id] = commonStyles[i];
+                        }
+                    }
+                }
+                filesLoaded++;
+                if (filesLoaded < filesCount) {
+                    this.fileReader.readAsText(files[filesLoaded]);
+                } else if (filesLoaded === filesCount) {
+                    this.populateZoneTables();
+                }
+                this.waiting.hide();
+            };
+            this.fileReader.readAsText(files[0]);
+        },
+        isFileDataValid: function (kmlDoc, fileName) {
+            var placemark = kmlDoc.documentElement.querySelector("Placemark");
+            if (kmlDoc.documentElement.tagName.toLowerCase() !== "kml" || !placemark) {
+                this.utils.showError("File '" + fileName + "' content format is incorrect.");
+                return false;
+            } else if (placemark.getElementsByTagName("name").length === 0) {
+                this.utils.showError("Name field required in " + fileName + ".");
+                return false;
+            } else if (!this.isPoint(placemark) && !this.isPolygon(placemark) && !this.isLineString(placemark)) {
+                this.utils.showError(fileName + " must contain point, polygon, or route (LineString) data.");
+                return false;
+            }
+            return true;
+        },
+        populateZoneTables: function () {
+            var hasValidZones = false,
+                isDataValid = function (data) {
+                    var result = { valid: true, message: "" }, i,
+                        inRange = (value, min, max) => !!(!isNaN(value) && (value >= min) && (value <= max));
+                    if (data.name.length === 0) {
+                        result.valid = false;
+                        result.message += "Zone name can not be empty. ";
+                    }
+                    if (data.points.length === 0) {
+                        result.valid = false;
+                        result.message += "Zone coordinates can not be empty. ";
+                    }
+                    for (i = 0; i < data.points.length; i++) {
+                        if (!inRange(data.points[i].y, -90, 90)) {
+                            result.valid = false;
+                            result.message += "Latitude coordinate value = " + data.points[i].y + " is incorrect. ";
+                        }
+                        if (!inRange(data.points[i].x, -180, 180)) {
+                            result.valid = false;
+                            result.message += "Longitude coordinate value = " + data.points[i].x + " is incorrect. ";
+                        }
+                    }
+                    return result;
+                };
+
+            this.zonesData.zones.forEach((zone, index) => {
+                zone.zoneParameters = this.getZoneParameters(zone);
+                var table = (zone.zoneParameters.isPolygon || zone.zoneParameters.isLineString) ?
+                    this.args.container.querySelector("#polygonList table") :
+                    this.args.container.querySelector("#pointList table"),
+                    tr, td, checkbox, isValid = isDataValid(zone.zoneParameters), colorDiv;
+
+                if (table.parentNode.style.display === "none") {
+                    table.parentNode.style.display = "";
+                }
+
+                tr = document.createElement("tr");
+                tr.id = "row" + index;
+                td = document.createElement("td");
+                table.querySelector("tbody").appendChild(tr);
+                //name column
+                tr.appendChild(td);
+                td.textContent = zone.zoneParameters.name;
+                //description column
+                td = td.cloneNode();
+                td.textContent = zone.zoneParameters.comment || "-";
+                tr.appendChild(td);
+                //color column
+                td = td.cloneNode();
+                if (zone.zoneParameters.colorFromOptions) {
+                    td.textContent = "Set by options.";
+                } else {
+                    colorDiv = document.createElement("div");
+                    colorDiv.className = "colorDiv";
+                    colorDiv.style.backgroundColor = this.utils.rgbToHex.apply(this.utils, this.utils.colorObjToArr(zone.zoneParameters.fillColor));
+                    colorDiv.style.opacity = zone.zoneParameters.fillColor.a / 255;
+                    td.appendChild(colorDiv);
+                }
+                tr.appendChild(td);
+                //selection column
+                td = td.cloneNode();
+                if (isValid.valid === true) {
+                    hasValidZones = true;
+                    checkbox = document.createElement("input");
+                    checkbox.type = "checkbox";
+                    checkbox.id = index;
+                    checkbox.className = "importCheckbox";
+                    checkbox.checked = true;
+                    td.appendChild(checkbox);
+                } else {
+                    tr.className = "error";
+                    this.args.container.querySelector("#exportKML").style.display = "";
+                    td.textContent = isValid.message;
+                }
+                tr.appendChild(td);
+            });
+            if (hasValidZones === true) {
+                this.args.container.querySelector("#importButton").style.display = "";
+                this.args.container.querySelector("#selectAll").checked = true;
+                this.args.container.querySelector("#selectAllLabel").style.display = "";
+            }
+        },
+        isPoint: function (placemark) {
+            var point = placemark.getElementsByTagName("Point");
+            return point.length > 0 && point[0].getElementsByTagName("coordinates").length > 0;
+        },
+        isPolygon: function (placemark) {
+            var polygon = placemark.getElementsByTagName("Polygon"),
+                oBoundary = (polygon.length > 0) ? polygon[0].getElementsByTagName("outerBoundaryIs") : [],
+                linearRing = (oBoundary.length > 0) ? oBoundary[0].getElementsByTagName("LinearRing") : [];
+            return polygon.length > 0 &&
+                oBoundary.length > 0 &&
+                linearRing.length > 0 &&
+                linearRing[0].getElementsByTagName("coordinates").length > 0;
+        },
+        isLineString: function (placemark) {
+            var lineString = placemark.getElementsByTagName("LineString");
+            return lineString.length > 0 &&
+                lineString[0].getElementsByTagName("coordinates").length > 0;
+        },
+        // Returns perpendicular offset at a line endpoint (from → to defines direction).
+        // coords are {lon, lat}; returns {dlon, dlat} in degrees.
+        _endCapOffset: function (from, to, bufferMeters) {
+            var lonScale = Math.cos(from.lat * Math.PI / 180);
+            var dx = (to.lon - from.lon) * lonScale;
+            var dy = to.lat - from.lat;
+            var len = Math.sqrt(dx * dx + dy * dy);
+            if (len === 0) { return { dlon: 0, dlat: 0 }; }
+            var px = -dy / len, py = dx / len; // left perpendicular unit vector
+            return {
+                dlon: px * bufferMeters * DEG_PER_METER_LAT / lonScale,
+                dlat: py * bufferMeters * DEG_PER_METER_LAT
+            };
+        },
+        // Returns miter-join offset at interior vertex p1, between segments p0→p1 and p1→p2.
+        // Caps miter length at 4× to prevent spikes at sharp turns.
+        _miterOffset: function (p0, p1, p2, bufferMeters) {
+            var lonScale = Math.cos(p1.lat * Math.PI / 180);
+            var d1x = (p1.lon - p0.lon) * lonScale, d1y = p1.lat - p0.lat;
+            var d2x = (p2.lon - p1.lon) * lonScale, d2y = p2.lat - p1.lat;
+            var len1 = Math.sqrt(d1x * d1x + d1y * d1y);
+            var len2 = Math.sqrt(d2x * d2x + d2y * d2y);
+            if (len1 === 0 || len2 === 0) {
+                return this._endCapOffset(len1 > 0 ? p0 : p1, len1 > 0 ? p1 : p2, bufferMeters);
+            }
+            var u1x = d1x / len1, u1y = d1y / len1;
+            var u2x = d2x / len2, u2y = d2y / len2;
+            // Left perpendiculars of each segment
+            var lp1x = -u1y, lp1y = u1x;
+            var lp2x = -u2y, lp2y = u2x;
+            // Miter bisector
+            var mx = lp1x + lp2x, my = lp1y + lp2y;
+            var mlen = Math.sqrt(mx * mx + my * my);
+            if (mlen < 1e-10) { mx = lp1x; my = lp1y; mlen = 1; }
+            mx /= mlen; my /= mlen;
+            // Miter correction factor (capped to prevent excessive spikes at sharp turns)
+            var dot = mx * lp1x + my * lp1y;
+            var miterLen = (Math.abs(dot) < 0.25) ? 4.0 : Math.min(4.0, 1.0 / dot);
+            return {
+                dlon: mx * bufferMeters * DEG_PER_METER_LAT / lonScale * miterLen,
+                dlat: my * bufferMeters * DEG_PER_METER_LAT * miterLen
+            };
+        },
+        // Converts an array of {lon, lat} LineString coordinates into a closed corridor polygon.
+        // Returns [{x: lon, y: lat}] in the format expected by the MyGeotab Zone API.
+        lineStringToCorridorPolygon: function (coords, bufferMeters) {
+            var n = coords.length, i, offset, leftSide = [], rightSide = [];
+            if (n < 2) { return []; }
+            bufferMeters = bufferMeters || this.options.corridorWidth || 100;
+            // Start cap — perpendicular from first segment only
+            offset = this._endCapOffset(coords[0], coords[1], bufferMeters);
+            leftSide.push({ x: coords[0].lon + offset.dlon, y: coords[0].lat + offset.dlat });
+            rightSide.push({ x: coords[0].lon - offset.dlon, y: coords[0].lat - offset.dlat });
+            // Interior miter joints
+            for (i = 1; i < n - 1; i++) {
+                offset = this._miterOffset(coords[i - 1], coords[i], coords[i + 1], bufferMeters);
+                leftSide.push({ x: coords[i].lon + offset.dlon, y: coords[i].lat + offset.dlat });
+                rightSide.push({ x: coords[i].lon - offset.dlon, y: coords[i].lat - offset.dlat });
+            }
+            // End cap — perpendicular from last segment (reversed direction)
+            offset = this._endCapOffset(coords[n - 1], coords[n - 2], bufferMeters);
+            leftSide.push({ x: coords[n - 1].lon + offset.dlon, y: coords[n - 1].lat + offset.dlat });
+            rightSide.push({ x: coords[n - 1].lon - offset.dlon, y: coords[n - 1].lat - offset.dlat });
+            // Build closed polygon: left side forward + right side reversed
+            rightSide.reverse();
+            var polygon = leftSide.concat(rightSide);
+            polygon.push(polygon[0]); // close the ring
+            return polygon;
+        },
+        getZoneParameters: function (zone) {
+            var desc = zone.getElementsByTagName("description"),
+                selfStyle = zone.getElementsByTagName("Style").length > 0 ? zone.getElementsByTagName("Style")[0] : null,
+                commonStyleId = zone.getElementsByTagName("styleUrl").length > 0 ?
+                    zone.getElementsByTagName("styleUrl")[0].textContent.replace("#", "") : null,
+                commonStyle = commonStyleId ? this.zonesData.commonStyles[commonStyleId] : null,
+                style = selfStyle || commonStyle, colorFromOptions = true, customColor;
+
+            if (style) {
+                var polyStyle = style.getElementsByTagName("PolyStyle"),
+                    elColor = polyStyle && polyStyle.length > 0 ? polyStyle[0].querySelector("color") : null,
+                    color = elColor ? elColor.textContent.replace("#", "").trim() : null;
+                if (color) {
+                    //kml colors are in abgr format
+                    var hex = color.slice(-2) + color.slice(4, 6) + color.slice(2, 4),
+                        alpha = color.slice(0, 2),
+                        rgb = this.utils.hexToRGBArray(hex);
+                    customColor = {
+                        r: rgb[0],
+                        g: rgb[1],
+                        b: rgb[2],
+                        a: (parseInt(alpha, 16))
+                    };
+                    colorFromOptions = false;
+                }
+            }
+
+            return {
+                activeFrom: this.minDate,
+                activeTo: new Date(2050, 0, 1),
+                comment: (desc.length > 0) ? this.utils.decodeHTMLEntities(desc[0].textContent) : "",
+                displayed: true,
+                externalReference: "",
+                fillColor: colorFromOptions ? this.options.zoneColor : customColor,
+                colorFromOptions: colorFromOptions,
+                groups: this.filter,
+                name: this.utils.decodeHTMLEntities(zone.getElementsByTagName("name")[0].textContent.trim()),
+                points: this.getPoints(zone),
+                zoneTypes: this.options.zoneTypes,
+                zoneSize: this.options.zoneSize,
+                zoneShape: this.options.zoneShape,
+                mustIdentifyStops: this.options.stoppedInsideZones,
+                isPolygon: this.isPolygon(zone),
+                isPoint: this.isPoint(zone),
+                isLineString: this.isLineString(zone)
+            };
+        },
+        getPoints: function (placemark) {
+            var coordinates = "",
+                points = [],
+                getDistance = function (sourceLat, sourceLon, targetLat, targetLon) {
+                    var earthRadius = 6371, // Radius of the earth in km
+                        degreeToRad = degree => degree * (Math.PI / 180),
+                        dLat = degreeToRad(targetLat - sourceLat),
+                        dLon = degreeToRad(targetLon - sourceLon),
+                        a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                            Math.cos(degreeToRad(sourceLat)) * Math.cos(degreeToRad(targetLat)) *
+                            Math.sin(dLon / 2) * Math.sin(dLon / 2),
+                        c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                    return earthRadius * c;
+                };
+
+            if (this.isPoint(placemark)) {
+                coordinates = placemark.querySelector("coordinates").textContent;
+                points = this.zoneCreator.getZonePoints(coordinates.split(",")[1] * 1, coordinates.split(",")[0] * 1,
+                    this.options.zoneSize, this.options.zoneShape);
+            } else if (this.isPolygon(placemark)) {
+                var polygon = placemark.getElementsByTagName("Polygon")[0],
+                    oBoundary = polygon.getElementsByTagName("outerBoundaryIs"),
+                    iBoundary = polygon.getElementsByTagName("innerBoundaryIs");
+                if (oBoundary.length > 0 && iBoundary.length > 0) {
+                    var outerCoordinatesTag = oBoundary[0].querySelector("coordinates"),
+                        innerCoodrdinatesTag = iBoundary[0].querySelector("coordinates"),
+                        outerCoord = outerCoordinatesTag.textContent.trim().split(/\s/),
+                        innerCoord = innerCoodrdinatesTag.textContent.trim().split(/\s/),
+                        minDistance = null,
+                        minDistanceOuterIndex = 0,
+                        minDistanceInnerIndex = 0,
+                        addPoints = function (start, end, coords) {
+                            for (var i = start; i < end; i++) {
+                                if (coords[i].length > 0) {
+                                    points.push({ x: coords[i].split(",")[0], y: coords[i].split(",")[1] });
+                                }
+                            }
+                        };
+                    outerCoord.forEach(function (outer, outerIndex) {
+                        if (outer.length > 0) {
+                            outer = outer.split(",");
+                            innerCoord.forEach(function (inner, innerIndex) {
+                                if (inner.length > 0) {
+                                    inner = inner.split(",");
+                                    if (minDistance === null) {
+                                        minDistance = getDistance(outer[0], outer[1], inner[0], inner[1]);
+                                    } else if (minDistance > getDistance(outer[0], outer[1], inner[0], inner[1])) {
+                                        minDistance = getDistance(outer[0], outer[1], inner[0], inner[1]);
+                                        minDistanceOuterIndex = outerIndex;
+                                        minDistanceInnerIndex = innerIndex;
+                                    }
+                                }
+                            });
+                        }
+                    });
+                    addPoints(0, minDistanceOuterIndex + 1, outerCoord);
+                    addPoints(minDistanceInnerIndex, innerCoord.length, innerCoord);
+                    addPoints(1, minDistanceInnerIndex + 1, innerCoord);
+                    addPoints(minDistanceOuterIndex, outerCoord.length, outerCoord);
+                } else if (oBoundary.length > 0 && iBoundary.length === 0) {
+                    coordinates = oBoundary[0].querySelector("coordinates");
+                    coordinates.textContent.trim().split(/\s/).forEach(function (coordPair) {
+                        if (coordPair.length > 0) {
+                            points.push({ x: coordPair.split(",")[0], y: coordPair.split(",")[1] });
+                        }
+                    });
+                }
+            } else if (this.isLineString(placemark)) {
+                var lineString = placemark.getElementsByTagName("LineString")[0];
+                var coordText = lineString.getElementsByTagName("coordinates")[0].textContent.trim();
+                var rawCoords = coordText.split(/\s+/);
+                var lineCoords = [];
+                rawCoords.forEach(function (triplet) {
+                    if (!triplet) { return; }
+                    var parts = triplet.split(",");
+                    var lon = parseFloat(parts[0]), lat = parseFloat(parts[1]);
+                    if (!isNaN(lon) && !isNaN(lat)) {
+                        lineCoords.push({ lon: lon, lat: lat });
+                    }
+                });
+                points = kml.lineStringToCorridorPolygon(lineCoords, kml.options.corridorWidth);
+            }
+            return points;
+        },
+        markRowSuccess: function (rowId, zoneId) {
+            var row = document.getElementById("row" + rowId),
+                link = document.createElement("a"),
+                showMapButton = document.createElement("button"),
+                showMapImage = document.createElement("span");
+
+            row.className = "imported";
+            row.lastChild.textContent = "Zone successfully imported.";
+            showMapImage.className = "geotabButtonIcons iconSearch";
+            showMapButton.appendChild(showMapImage);
+            showMapButton.style.float = "right";
+            showMapButton.className = "geotabButton emptyButton";
+            link.appendChild(showMapButton);
+            link.href = "#map,zones:!((id:" + zoneId + "))";
+            row.firstChild.appendChild(link);
+        },
+        markRowError: function (rowId, errorString) {
+            var row = document.getElementById("row" + rowId);
+            row.className = "error";
+            row.lastChild.textContent = errorString;
+        },
+        updateControlsVisibility: function (enableImportButton) {
+            if (!this.args.container) {
+                return false;
+            }
+            var successRows = this.args.container.querySelectorAll(".imported"),
+                errorRows = this.args.container.querySelectorAll(".error");
+
+            if (successRows.length > 0) {
+                this.args.container.querySelector("#hideImportedLabel").style.display = "";
+            }
+            if (errorRows.length > 0) {
+                this.args.container.querySelector("#exportKML").style.display = "";
+            }
+            if (enableImportButton) {
+                this.args.container.querySelector("#importButton").removeAttribute("disabled");
+            }
+            if (this.args.container.getElementsByClassName("importCheckbox").length === 0) {
+                this.args.container.querySelector("#selectAllLabel").style.display = "none";
+            }
+        },
+        saveZones: function (zonesToImport) {
+            var calls = [], callsParts = [], pushedCalls = 0, sentParts = 0,
+                doAfterCall = callLength => {
+                    sentParts++;
+                    this.waiting.updateProgressBar((callLength * 100) / zonesToImport.length);
+                    if (sentParts === callsParts.length) {
+                        this.waiting.hideProgressBar();
+                        let importButton = this.args.container.querySelector("#importButton");
+                        if (importButton) {
+                            importButton.removeAttribute("disabled");
+                        }
+                    } else {
+                        sendQuery(callsParts[sentParts]);
+                    }
+                    this.updateControlsVisibility();
+                },
+                sendQuery = call => {
+                    this.api.multiCall(call, data => {
+                        call.every((callData, index) => {
+                            var zoneId = (typeof data === "string") ? data : data[index];
+                            if (!this.args.container) {
+                                this.importedInBG.push({ rowId: callData[1].entity.rowId, id: zoneId });
+                            } else {
+                                this.markRowSuccess(callData[1].entity.rowId, zoneId);
+                            }
+                            return true;
+                        });
+                        doAfterCall(call.length);
+                    }, errorString => {
+                        call.every(callData => {
+                            if (!this.args.container) {
+                                this.importedInBG.push({ rowId: callData[1].entity.rowId, message: errorString });
+                            } else {
+                                this.markRowError(callData[1].entity.rowId, errorString);
+                            }
+                            return true;
+                        });
+                        doAfterCall(call.length);
+                    });
+                };
+            if (zonesToImport.length === 0) {
+                alert("No selected zones to import.");
+                return;
+            }
+            zonesToImport.every(zone => {
+                if (pushedCalls < this.itemsPerCall) {
+                    pushedCalls++;
+                } else {
+                    callsParts.push(calls);
+                    calls = [];
+                    pushedCalls = 1;
+                }
+                calls.push(["Add", { typeName: "Zone", entity: zone }]);
+                return true;
+            });
+            if (calls.length > 0) {
+                callsParts.push(calls);
+            }
+            this.args.container.querySelector("#importButton").setAttribute("disabled", "disabled");
+            this.waiting.showProgressBar();
+            sendQuery(callsParts[0]);
+        },
+        updateImportedInBG: function () {
+            this.importedInBG.every(importedInBG => {
+                if (importedInBG.id !== undefined) {
+                    this.markRowSuccess(importedInBG.rowId, importedInBG.id);
+                } else if (importedInBG.message !== undefined) {
+                    this.markRowError(importedInBG.rowId, importedInBG.message);
+                }
+                return true;
+            });
+            this.updateControlsVisibility(true);
+            this.importedInBG = [];
+        },
+        importZones: function () {
+            var checkboxes = this.args.container.getElementsByClassName("importCheckbox"),
+                zonesToImport = [];
+
+            for (var i = 0; i < checkboxes.length; i++) {
+                if (checkboxes[i].checked) {
+                    zonesToImport.push(this.zonesData.zones[checkboxes[i].id].zoneParameters);
+                    zonesToImport[zonesToImport.length - 1].rowId = checkboxes[i].id;
+                }
+            }
+            this.saveZones(zonesToImport);
+        },
+        hideImported: function (event) {
+            var rows = this.args.container.getElementsByClassName("imported"), i;
+            if (event.currentTarget.checked === true) {
+                for (i = 0; i < rows.length; i++) {
+                    rows[i].style.display = "none";
+                }
+            } else {
+                for (i = 0; i < rows.length; i++) {
+                    rows[i].style.display = "";
+                }
+            }
+        },
+        exportKML: function () {
+            var rows = this.args.container.querySelectorAll(".checkmateListTable .error"), i, zonesString = "",
+                showSave,
+                downloadAttributeSupport = "download" in document.createElement("a"),
+                BlobBuilder = window.BlobBuilder || window.WebKitBlobBuilder || window.MozBlobBuilder || window.MSBlobBuilder;
+
+            for (i = 0; i < rows.length; i++) {
+                var zone = this.zonesData.zones[rows[i].id.replace("row", "")];
+                zonesString += new XMLSerializer().serializeToString(zone);
+            }
+            zonesString = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<kml>" + zonesString + "<\/kml>";
+
+            navigator.saveBlob = navigator.saveBlob || navigator.msSaveBlob || navigator.mozSaveBlob || navigator.webkitSaveBlob;
+            window.saveAs = window.saveAs || window.webkitSaveAs || window.mozSaveAs || window.msSaveAs;
+
+            if (BlobBuilder && (window.saveAs || navigator.saveBlob)) {
+                showSave = (data, name) => {
+                    var builder = new BlobBuilder(),
+                        blob;
+
+                    builder.append(data);
+                    blob = builder.getBlob("text/plain; charset=UTF-8" || "application/octet-stream");
+                    if (window.saveAs) {
+                        window.saveAs(blob, name);
+                    } else {
+                        navigator.saveBlob(blob, name);
+                    }
+                };
+            } else if (downloadAttributeSupport) {
+                showSave = (data, name) => {
+                    var element = document.createElement("a");
+                    element.setAttribute("href", "data:text/plain;charset=utf-8," + encodeURIComponent(zonesString));
+                    element.setAttribute("download", name);
+                    element.style.display = "none";
+                    this.args.container.appendChild(element);
+                    element.click();
+                    this.args.container.removeChild(element);
+                };
+            }
+
+            if (showSave) {
+                showSave(zonesString, "not_imported.kml");
+            } else {
+                alert("Your browser does not support any method of saving JavaScript gnerated data to files.");
+            }
+        },
+        selectAll: function (event) {
+            var checkboxes = document.getElementsByClassName("importCheckbox"), i;
+            for (i = 0; i < checkboxes.length; i++) {
+                checkboxes[i].checked = (!!event.currentTarget.checked);
+            }
+        },
+        clearDataTables: function () {
+            var removeRows = tableId => {
+                var table = this.args.container.querySelector("#" + tableId + " table"),
+                    trs = table.querySelectorAll("tr");
+
+                if (trs.length > 2) {
+                    for (var i = 2; i < trs.length; i++) {
+                        trs[i].parentNode.removeChild(trs[i]);
+                    }
+                }
+                if (table.parentNode.style.display !== "none") {
+                    table.parentNode.style.display = "none";
+                    this.args.container.querySelector("#importButton").style.display = "none";
+                    this.args.container.querySelector("#hideImportedLabel").style.display = "none";
+                    this.args.container.querySelector("#progressContainer").style.display = "none";
+                    this.args.container.querySelector("#exportKML").style.display = "none";
+                }
+            };
+            removeRows("polygonList");
+            removeRows("pointList");
+            this.args.container.querySelector("#selectAll").checked = false;
+            this.args.container.querySelector("#selectAllLabel").style.display = "none";
+            this.utils.hideError();
+        },
+        applyOptions: function () {
+            var selectedTypes = this.args.container.querySelector("#typesSelect").selectedOptions ||
+                this.utils.getSelectValues(this.args.container.querySelector("#typesSelect")),
+                types = [],
+                controllerElement = this.args.container.querySelector("#optionsControllerElement"),
+                allZoneTypesData = angular.element(controllerElement).scope().zoneTypeOptions;
+
+            for (var i = 0;i < selectedTypes.length; i++) {
+                allZoneTypesData.every(data => {
+                    if (data.id === selectedTypes[i].value) {
+                        types.push(data.isSystem === true ? data.id : data);
+                        return false;
+                    }
+                    return true;
+                });
+            }
+
+            this.options.zoneTypes = types;
+            this.options.zoneColor = this.colorPickerObj.value();
+            this.options.transparencyValue = this.colorPicker.getTransparencyControl().get();
+            this.options.stoppedInsideZones = this.args.container.querySelector("#stoppedInsideZones").checked;
+
+            var corridorWidthInput = this.args.container.querySelector("#corridorWidth");
+            if (corridorWidthInput) {
+                var parsed = parseInt(corridorWidthInput.value, 10);
+                this.options.corridorWidth = (!isNaN(parsed) && parsed > 0) ? parsed : this.defaultCorridorWidth;
+            }
+
+            this.zonesData.zones.forEach(zone => {
+                zone.zoneParameters = this.getZoneParameters(zone);
+            });
+        },
+        setDefaultOptions: function () {
+            var typesSelect = this.args.container.querySelector("#typesSelect"),
+                colorPickerField = this.args.container.querySelector("#colorPickerField");
+            for (var i = 0; i < typesSelect.options.length; i++) {
+                typesSelect.options[i].selected = typesSelect.options[i].value === this.defaultZoneType ? true : false;
+            }
+            this.colorPicker.setDefaultColor();
+            colorPickerField.value = this.colorPicker.getDefaultColorHex();
+            colorPickerField.style.opacity = (this.colorPicker.getDefaultColor()[3]) / 255;
+            this.args.container.querySelector("#stoppedInsideZonesNo").checked = false;
+            this.args.container.querySelector("#stoppedInsideZones").checked = true;
+        },
+        clear: function () {
+            this.uploader.clear();
+            this.zonesData.zones = [];
+            this.zonesData.commonStyles = [];
+            this.clearDataTables();
+        }
+    };
+
+    let globals = (function () { return this || (0, eval)("this"); }());
+
+    if (typeof module !== "undefined" && module.exports) {
+        module.exports = kml;
+    } else if (typeof define === "function" && define.amd) {
+        define(function () { return kml; });
+    } else {
+        globals.kml = kml;
+    }
+}());
+(function () {
+    "use strict";
+    var VanillaSlider = function () {
+        var svgNameSpace = "http://www.w3.org/2000/svg",
+            svgElements = {
+                "path": true,
+                "circle": true,
+                "svg": true,
+                "rect": true,
+                "text": true
+            };
+
+        return {
+            vanilla: (function () {
+                var classNameCtrl = function (el) {
+                    var obj = typeof el.className === "string" ? el : el.className,
+                        param = typeof el.className === "string" ? "className" : "baseVal";
+                    return {
+                        get: function () {
+                            return obj[param];
+                        },
+                        set: function (text) {
+                            obj[param] = text;
+                        }
+                    };
+                },
+                    hasClass = function (el, className) {
+                        return classNameCtrl(el).get().indexOf(className) !== -1;
+                    },
+                    addClass = function (el, className) {
+                        if (el.classList) {
+                            el.classList.add(className);
+                        } else {
+                            var classCtrl = classNameCtrl(el);
+                            if (classCtrl.get().indexOf(className) < 0) {
+                                classCtrl.set(classCtrl.get() + (classCtrl.get() ? " " : "") + className);
+                            }
+                        }
+                    },
+                    isArray = function (arr) {
+                        return Object.prototype.toString.call(arr).indexOf("Array") !== -1;
+                    },
+                    isUsualObject = function (obj) {
+                        return Object.prototype.toString.call(obj).indexOf("Object") !== -1;
+                    },
+                    createElement = function (name) {
+                        if (svgElements.hasOwnProperty(name.toLowerCase())) {
+                            return document.createElementNS(svgNameSpace, name);
+                        }
+                        return document.createElement(name);
+                    },
+                    changeDisplay = function (element, newValue) {
+                        element.style.display = newValue;
+                        return element;
+                    },
+                    getRealDisplay = function (elem) {
+                        var computedStyle;
+
+                        if (elem.currentStyle) {
+                            return elem.currentStyle.display;
+                        } else if (window.getComputedStyle) {
+                            computedStyle = window.getComputedStyle(elem, null);
+
+                            return computedStyle.getPropertyValue("display");
+                        }
+                    },
+                    show = function (el) {
+                        var nodeName, body = document.body, testElem, display;
+
+                        if (getRealDisplay(el) !== "none") {
+                            return el;
+                        }
+
+                        changeDisplay(el, "");
+
+                        if (getRealDisplay(el) === "none") {
+                            nodeName = el.nodeName;
+
+                            testElem = document.createElement(nodeName);
+                            body.appendChild(testElem);
+                            display = getRealDisplay(testElem);
+
+                            if (display === "none") {
+                                display = "block";
+                            }
+
+                            body.removeChild(testElem);
+
+                            changeDisplay(el, display);
+                        }
+
+                        return el;
+                    },
+                    hide = function (element) {
+                        return changeDisplay(element, "none");
+                    },
+
+                    vanilla = {
+                        /**
+                         * @param el {HTMLElement} Element for adding classes
+                         * @param classes {String} string of classes separated by space
+                         */
+                        addClasses: function (el, classes) {
+                            var classArr = classes.split(" "), i;
+
+                            for (i = 0; i < classArr.length; i++) {
+                                addClass(el, classArr[i]);
+                            }
+                        },
+                        hasClass: hasClass,
+                        /**
+                         * @param el {HTMLElement} Element for adding styles
+                         * @param cssValues {Object} Object with css rules
+                         */
+                        css: function (el, cssValues) {
+                            var createIterator = function (element, values) {
+                                return function (propertyName) {
+                                    element.style[propertyName] = values[propertyName];
+                                };
+                            };
+                            Object.keys(cssValues).forEach(createIterator(el, cssValues));
+                        },
+                        /**
+                         * @param tagName {String} Tag name of HTML element
+                         * @param attributes {Object} Object with attributes of the element
+                         * @param css {Object} Object with css rules
+                         * @return element {HTMLElement} A new HTMLElement with set attributes and css rules
+                         */
+                        create: function (tagName, attributes, css) {
+                            var element = createElement((tagName || "").toUpperCase()),
+                                createIterator = function (el, attrs) {
+                                    return function (propertyName) {
+                                        try {
+                                            el.setAttribute(propertyName, attrs[propertyName]);
+                                        } catch (e) {
+                                            //try to catch 114827 error, should be removed when it will be fixed or will not happen in future
+                                            throw new Error("Try to set " + propertyName +
+                                                " attribute " + attrs[propertyName] + " to " + el.tagName +
+                                                " (" + tagName + "). Connected with this error: " + e.message);
+                                        }
+                                    };
+                                };
+                            if (attributes) {
+                                Object.keys(attributes).forEach(createIterator(element, attributes));
+                            }
+                            if (css) {
+                                vanilla.css(element, css);
+                            }
+                            return element;
+                        },
+                        /**
+                         * @return {Object} set of root elements
+                         */
+                        extend: function () {
+                            var length = arguments.length,
+                                src, srcKeys, srcAttr,
+                                fullCopy = false,
+                                resAttr,
+                                res = arguments[0], i = 1, j;
+
+                            if (typeof res === "boolean") {
+                                fullCopy = res;
+                                res = arguments[1];
+                                i++;
+                            }
+                            while (i !== length) {
+                                src = arguments[i];
+                                srcKeys = Object.keys(src);
+                                for (j = 0; j < srcKeys.length; j++) {
+                                    srcAttr = src[srcKeys[j]];
+                                    if (fullCopy && (isUsualObject(srcAttr) || isArray(srcAttr))) {
+                                        resAttr = res[srcKeys[j]];
+                                        resAttr = res[srcKeys[j]] = (isUsualObject(resAttr) || isArray(resAttr)) ?
+                                            resAttr : (isArray(srcAttr) ? [] : {});
+                                        vanilla.extend(fullCopy, resAttr, srcAttr);
+                                    } else {
+                                        res[srcKeys[j]] = src[srcKeys[j]];
+                                    }
+                                }
+                                i++;
+                            }
+                            return res;
+                        },
+                        isArray: isArray,
+                        show: show,
+                        hide: hide,
+                        /**
+                         * Toggle a DOM elements display
+                         * @param el {HTMLElement} DOM Element
+                         * @param toggle {Boolean} true = show, false = hide
+                         * */
+                        toggle: function (el, toggle) {
+                            if (toggle) {
+                                this.show(el);
+                            } else {
+                                this.hide(el);
+                            }
+                        },
+                        /**
+                         * get the first element that matches the selector by testing the element itself and traversing up through its ancestors in the DOM tree.
+                         * @param elem {HTMLElement} DOM Element
+                         * @param selector {String}
+                         * */
+                        closest: function (elem, selector) {
+                            var matchesSelector = elem && (elem.matches || elem.webkitMatchesSelector ||
+                                elem.mozMatchesSelector || elem.msMatchesSelector);
+
+                            if (matchesSelector) {
+                                while (elem && elem !== document.body) {
+                                    if (matchesSelector.bind(elem)(selector)) {
+                                        return elem;
+                                    } else {
+                                        elem = elem.parentNode;
+                                    }
+                                }
+                            }
+                            return false;
+                        },
+                        offset: function (elem) {
+                            var offsetLeft = 0,
+                                tmp, offsetTop = 0,
+                                result = {
+                                    left: 0,
+                                    top: 0
+                                };
+
+                            if (elem !== null) {
+                                tmp = elem;
+                                while (tmp !== null) {
+                                    offsetLeft += tmp.offsetLeft;
+                                    offsetTop += tmp.offsetTop;
+                                    tmp = tmp.offsetParent;
+                                }
+                                result.left = offsetLeft;
+                                result.top = offsetTop;
+                            }
+                            return result;
+                        }
+                    };
+                return vanilla;
+            })(),
+            slider: function (elem, customOptions) {
+                var defaultOptions = {
+                    max: 100,
+                    min: 0,
+                    step: 5,
+                    value: 0
+                },
+                    body = window.document.body,
+                    isTouch = kml.utils.isBrowserSupportTouchEvents(),
+                    options = customOptions ? Object.keys(customOptions).reduce(function (result, key) {
+                        result[key] = customOptions[key];
+                        return result;
+                    }, defaultOptions) : defaultOptions,
+                    slider = (kml.utils.inputTypeSupport("range", "a") ? function (parent) {
+                        var self = parent.appendChild(kml.vanillaSlider.vanilla.create("INPUT", {
+                            "class": "vanillaSlider",
+                            type: "range",
+                            max: options.max,
+                            min: options.min,
+                            step: options.step,
+                            value: options.value,
+                            "ng-model": "sliderValue"
+                        })),
+                            change = kml.utils.NOOP;
+                        kml.slider = self;
+
+                        if (typeof options.onChange === "function") {
+                            change = options.onChange;
+                            self.addEventListener("change", function (e) {
+                                change.call(this, this.value, e);
+                            }, false);
+                            self.addEventListener("input", function (e) {
+                                change.call(this, this.value, e);
+                            }, false);
+                        }
+
+                        return {
+                            set: function (prop, val) {
+                                self[prop] = val;
+                            },
+                            get: function (prop) {
+                                return self[prop];
+                            },
+                            disable: function () {
+                                self.setAttribute("disabled", "disabled");
+                            },
+                            enable: function () {
+                                self.removeAttribute("disabled");
+                            }
+                        };
+                    } : function (parent) {
+                        var change = kml.utils.NOOP,
+                            span = parent.appendChild(kml.vanillaSlider.vanilla.create("SPAN", {
+                                "class": "vanillaSliderElement"
+                            })),
+                            halfScrollableWidth = span.offsetWidth / 2,
+                            scrollerWidth = parent.offsetWidth,
+                            currentPos = 0,
+                            tempPos = 0,
+                            max = options.max,
+                            min = options.min,
+                            step = options.step,
+                            amp = max - min,
+                            positions = amp / step,
+                            posWidth = scrollerWidth / positions,
+                            handlers,
+                            getInteractionEvent = function (eventName) {
+                                var evt = document.createEvent("Event");
+                                evt.initEvent(eventName, true, false);
+                                return evt;
+                            },
+                            move = function (delta, currPoint) {
+                                var relativeLength = posWidth && Math.round((Math.abs(delta) / posWidth)) * step,
+                                    startPoint = typeof currPoint === "number" ? currPoint : currentPos;
+                                if (relativeLength) {
+                                    if (delta < 0) {
+                                        tempPos = Math.max(min, startPoint - relativeLength);
+                                    } else {
+                                        tempPos = Math.min(max, startPoint + relativeLength);
+                                    }
+                                    tempPos = Math.round(tempPos / step) * step;
+                                    setValue(tempPos);
+                                    change.call(span, tempPos);
+                                }
+                                return tempPos;
+                            },
+                            setValue = function (val) {
+                                span.style.left = ((val - min) / amp) * 100 + "%";
+                            },
+                            events = {
+                                start: isTouch ? "touchstart" : "mousedown",
+                                move: isTouch ? "touchmove" : "mousemove",
+                                end: isTouch ? "touchend" : "mouseup"
+                            },
+                            xStart = 0,
+                            mousemove = function (e) {
+                                move(e.pageX - xStart);
+                            },
+                            click = function (e) {
+                                var bbox;
+                                if (e.target !== span) {
+                                    bbox = this.getBoundingClientRect();
+                                    posWidth = bbox.width / positions;
+                                    currentPos = move(e.pageX - bbox.left, 0);
+                                }
+                            },
+                            eventHandler = function (e) {
+                                var event;
+                                if ("changedTouches" in e) {//firefox has this property in prototype
+                                    if (e.changedTouches.length === 1) {
+                                        event = e.changedTouches[0];
+                                    } else {
+                                        return true;
+                                    }
+                                } else {
+                                    event = e;
+                                }
+                                return handlers[e.type].call(this, event, e);
+                            },
+                            mouseup = function () {
+                                currentPos = tempPos;
+                                span.dispatchEvent(getInteractionEvent("blur"));
+                                body.removeEventListener(events.move, eventHandler, false);
+                                body.removeEventListener(events.end, eventHandler, false);
+                            },
+                            mousedown = function (e, originalEvent) {
+                                originalEvent.preventDefault();
+                                xStart = e.pageX;
+                                scrollerWidth = parent.offsetWidth;
+                                posWidth = scrollerWidth / positions;
+                                halfScrollableWidth = span.offsetWidth / 2;
+                                span.dispatchEvent(getInteractionEvent("focus"));
+                                body.addEventListener(events.move, eventHandler, false);
+                                body.addEventListener(events.end, eventHandler, false);
+                            };
+
+                        handlers = {
+                            mousedown: mousedown,
+                            touchstart: mousedown,
+                            mousemove: mousemove,
+                            touchmove: mousemove,
+                            mouseup: mouseup,
+                            touchend: mouseup
+                        };
+
+                        kml.vanillaSlider.vanilla.addClasses(parent, "vanillaSlider");
+                        span.addEventListener(events.start, eventHandler, false);
+                        parent.addEventListener("click", click, false);
+                        span.style.left = -halfScrollableWidth + "px";
+                        if (typeof options.onChange === "function") {
+                            change = options.onChange;
+                        }
+                        if (options.value) {
+                            currentPos = Math.max(Math.min(options.value, max), min);
+                            setValue(currentPos);
+                        }
+
+                        return {
+                            set: function (prop, val) {
+                                currentPos = Math.max(Math.min(val, max), min);
+                                setValue(currentPos);
+                                change.call(span, currentPos);
+                            },
+                            get: function () {
+                                return currentPos;
+                            },
+                            disable: function () {
+                                span.removeEventListener(events.start, eventHandler, false);
+                                parent.removeEventListener("click", click, false);
+                                mouseup();
+                            },
+                            enable: function () {
+                                span.addEventListener(events.start, eventHandler, false);
+                                parent.addEventListener("click", click, false);
+                            }
+                        };
+                    })(elem),
+                    disabled = false;
+
+                return {
+                    getValue: function () {
+                        return slider.get("value");
+                    },
+                    setValue: function (val) {
+                        if (val < options.min) {
+                            val = options.min;
+                        }
+                        if (val > options.max) {
+                            val = options.max;
+                        }
+                        slider.set("value", val);
+                        return val;
+                    },
+                    disable: function () {
+                        if (!disabled) {
+                            slider.disable();
+                            disabled = true;
+                        }
+                    },
+                    enable: function () {
+                        if (disabled) {
+                            slider.enable();
+                            disabled = false;
+                        }
+                    }
+                };
+            }
+        };
+    };
+
+    let globals = (function () { return this || (0, eval)("this"); }());
+
+    if (typeof module !== "undefined" && module.exports) {
+        module.exports = VanillaSlider;
+    } else if (typeof define === "function" && define.amd) {
+        define(function () { return VanillaSlider; });
+    } else {
+        globals.VanillaSlider = VanillaSlider;
+    }
+}());
+(function () {
+    "use strict";
+    var Utils = function () {
+        let errorMessageElement = kml.args.container.querySelector("#errorMessage");
+
+        return {
+            inputTypeSupport: function (type, testValue) {
+                var testEl = document.createElement("input");
+
+                testEl.setAttribute("type", type);
+                testEl.setAttribute("value", testValue);
+                return testEl.type === type && testEl.value !== testValue;
+            },
+            isBrowserSupportTouchEvents: function () {
+                var result = true;
+                try {
+                    document.createEvent("TouchEvent");
+                } catch (e) {
+                    result = false;
+                }
+                return result;
+            },
+            colorObjToArr: function (color) {
+                if (!Array.isArray(color)) {
+                    return [color.r, color.g, color.b, color.a];
+                }
+                return color;
+            },
+            rgbToHex: function (rgbaOrR, G, B) {
+                if (typeof rgbaOrR === "object") {
+                    return kml.rgbToHex.apply(this, [rgbaOrR.r, rgbaOrR.g, rgbaOrR.b]);
+                }
+                return "#" + [rgbaOrR, G, B].map(function (number) {
+                    var hex = (number || 0).toString(16);
+                    return hex.length < 2 ? "0" + hex : hex;
+                }).join("");
+            },
+            hexToRGBArray: function (hexColor) {
+                var normalizedColor = this.normalizeHexColor(hexColor),
+                    hexToDec = offset => parseInt(normalizedColor.slice(offset, offset + 2), 16);
+                return [
+                    hexToDec(0),
+                    hexToDec(2),
+                    hexToDec(4)
+                ];
+            },
+            normalizeHexColor: hexColor => hexColor.replace("#", "").replace(/^(.)(.)(.)$/, "$1$1$2$2$3$3"),
+            showError: function (message) {
+                errorMessageElement.textContent = message;
+                errorMessageElement.style.display = "";
+            },
+            hideError: function () {
+                if (errorMessageElement.style.display !== "none") {
+                    errorMessageElement.style.display = "none";
+                }
+            },
+            getSelectValues: function (select) {
+                var result = [],
+                    options = select && select.options,
+                    opt;
+
+                for (var i = 0, iLen = options.length; i < iLen; i++) {
+                    opt = options[i];
+
+                    if (opt.selected) {
+                        result.push({ value: opt.value });
+                    }
+                }
+                return result;
+            },
+            decodeHTMLEntities: function (str) {
+                var a = document.createElement("a");
+                if (str && typeof str === "string") {
+                    str = str.replace(/&amp;nbsp;/g, "");
+                }
+                a.innerHTML = str;
+                return a.textContent;
+            }
+        };
+    };
+
+    let globals = (function () { return this || (0, eval)("this"); }());
+
+    if (typeof module !== "undefined" && module.exports) {
+        module.exports = Utils;
+    } else if (typeof define === "function" && define.amd) {
+        define(function () { return Utils; });
+    } else {
+        globals.Utils = Utils;
+    }
+}());
+(function () {
+    "use strict";
+    let ColorPicker = () => {
+        let quickColorsBox = null,
+            transparencyControl = null,
+            colorToInitWith = null,
+            defaultColor = [255, 69, 0, 38],
+            defaultColorHex = "#FF4500",
+            arrDefaultColorRGBA = { r: 255, g: 69, b: 0, a: 38 },
+            defaultTransparencyValue = 85,
+            picker = null,
+            setVariables = () => {
+                quickColorsBox = kml.args.container.querySelector("#colorPicker").querySelectorAll(".quickColorsBox");
+                colorToInitWith = kml.utils.colorObjToArr(arrDefaultColorRGBA || defaultColor);
+                transparencyControl = (function (content) {
+                    let sliderEl = content.getElementsByClassName("transparencySlider")[0],
+                        buttonEls = content.getElementsByClassName("transparencyButtonSet")[0],
+                        slider = () => {
+                            let transparencySliderValue = content.getElementsByClassName("transparencySliderValue")[0],
+                                transparencySlider = content.getElementsByClassName("transparencySliderControl")[0],
+                                getValue = newVal => Math.round(100 - (newVal <= 1 ? newVal : newVal / 255) * 100),
+                                sliderUI = kml.vanillaSlider.slider(transparencySlider, {
+                                    min: 0,
+                                    max: 100,
+                                    step: 5,
+                                    value: transparencySliderValue.textContent = getValue(colorToInitWith[3])
+                                });
+
+                            return {
+                                get: () => sliderUI ? Math.round((100 - sliderUI.getValue()) / 100 * 255) : 0,
+                                set: function (val) {
+                                    sliderUI.setValue((val.a ? val.a : val[3]) || 0);
+                                }
+                            };
+                        },
+                        chooseElement = function (useful, useless) {
+                            useless.parentNode.removeChild(useless);
+                            useful.style.display = "block";
+                        },
+                        control = slider();
+
+                    chooseElement(sliderEl, buttonEls);
+                    return control;
+                })(kml.args.container.querySelector("#colorPicker"));
+            };
+
+        return {
+            getDefaultColor: () => defaultColor,
+            getDefaultColorHex: () => defaultColorHex,
+            getTransparencyControl: () => transparencyControl,
+            getDefaultTransparencyValue: () => defaultTransparencyValue,
+            getPicker: () => picker,
+            setVariables,
+            formColorPicker: () => {
+                setVariables();
+                let quickColors = ["#ff4500", "#ffa500", "#008000", "#ffff00", "#ADD8E6", "#0000ff", "#800080"],
+                    listeners = [],
+                    getColorElement = () => kml.args.container.querySelector("#colorPicker INPUT:not([type='radio'])"),
+                    customColorToInternal = function (customColor) {
+                        let rgbColor = typeof customColor === "string" ? kml.utils.hexToRGBArray(customColor) : customColor,
+                            color = kml.utils.colorObjToArr(rgbColor);
+                        if (Math.max.apply(Math, color) > 1) {
+                            color = color.map(value => (typeof value === "undefined") ? 1 : value / 255);
+                        }
+                        while (color.length < 4) {
+                            color.push(0);
+                        }
+                        return color.slice();
+                    },
+                    fireChangeEvent = function (value) {
+                        listeners.forEach(function (listener) {
+                            if (listener.eventType === "change") {
+                                listener.callback(value);
+                            }
+                        });
+                    },
+                    createColorPicker = () => {
+                        let isSupportColor = kml.utils.inputTypeSupport("color", "hello world"),
+                            nativeColorPicker = () => {
+                                let elem = getColorElement();
+                                elem.type = "color";
+                                elem.addEventListener("change", () => {
+                                    fireChangeEvent(this.value);
+                                }, false);
+
+                                return {
+                                    setValue: function (val) {
+                                        let newValue = kml.utils.rgbToHex.apply(kml, kml.utils.colorObjToArr(val));
+                                        elem.value = newValue;
+                                        elem.style.opacity = (kml.utils.colorObjToArr(val)[3]) / 255;
+                                        fireChangeEvent(newValue);
+                                    },
+                                    getValue: () => kml.utils.hexToRGBArray(elem.value),
+                                    getHexValue: () => elem.value
+                                };
+                            },
+                            jqueryColorPicker = () => {
+                                let elem = getColorElement(),
+                                    Jscolor = jscolor,
+                                    colorPicker = new Jscolor(elem);
+
+                                colorPicker.valueElement.addEventListener("change", () => {
+                                    fireChangeEvent("#" + this.value);
+                                }, false);
+
+                                return {
+                                    setValue: function (val) {
+                                        let newVal = val.length > 3 ? val.slice(0, 3) : val,
+                                            aVal = val.length > 3 ? val.slice(3, 4) :
+                                                (kml.utils.colorObjToArr(defaultColor)[3]) * 255,
+                                            newValue = kml.utils.rgbToHex.apply(kml.utils, kml.utils.colorObjToArr(newVal));
+
+                                        colorPicker.fromRGB.apply(colorPicker, customColorToInternal(newVal));
+                                        getColorElement().style.opacity = aVal / 255;
+                                        getColorElement().style.backgroundColor = newValue;
+
+                                        fireChangeEvent(newValue);
+                                    },
+                                    getValue: () => (colorPicker.rgb || defaultColor).map(val => val * 255),
+                                    getHexValue: () => elem.value,
+                                    originalPicker: colorPicker
+                                };
+                            };
+
+                        return (isSupportColor ? nativeColorPicker : jqueryColorPicker)();
+                    },
+                    attachEvent = function (eventType, callback) {
+                        listeners.push({
+                            eventType: eventType,
+                            callback: callback
+                        });
+                    };
+                picker = createColorPicker();
+                picker.setValue(colorToInitWith);
+
+                quickColors.forEach(function (value) {
+                    let quickColor = document.createElement("div");
+                    quickColor.className = "quickColor";
+                    quickColor.setAttribute("ng-click", "setQuickColor($event)");
+                    quickColor.style.backgroundColor = value;
+                    quickColorsBox[0].appendChild(quickColor);
+                });
+
+                return {
+                    /**
+                     * Gets or sets current color and transparency
+                     * @param {Array|object} value new color and transparency.
+                     * The following values are all valid:
+                     * @returns {object} rgba object with their values between 0 and 255
+                     */
+                    value: function (value) {
+                        let rgb;
+                        if (value) {
+                            picker.setValue(value);
+                            transparencyControl.set(value);
+                            return value;
+                        } else {
+                            rgb = picker.getValue();
+                            return {
+                                r: rgb[0],
+                                g: rgb[1],
+                                b: rgb[2],
+                                a: transparencyControl.get()
+                            };
+                        }
+                    },
+                    attachEvent: attachEvent
+                };
+            },
+            setQuickColor: function (e) {
+                if (!e.target.style.backgroundColor) {//clicked on container
+                    return;
+                }
+
+                let backgroundColor = e.target.style.backgroundColor,
+                    matches = backgroundColor.indexOf("#") < 0 ?
+                        /\brgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/g.exec(backgroundColor).splice(1) :
+                        kml.utils.hexToRGBArray(backgroundColor),
+                    rgba = [];
+
+                rgba.push(parseInt(matches[0], 10));
+                rgba.push(parseInt(matches[1], 10));
+                rgba.push(parseInt(matches[2], 10));
+                rgba.push(transparencyControl.get());
+
+                picker.setValue(rgba);
+                kml.args.container.querySelector("#colorPickerField").value = picker.getHexValue();
+            },
+
+            setDefaultColor: () => {
+                picker.setValue(defaultColor);
+            }
+        };
+    };
+
+    let globals = (function () { return this || (0, eval)("this"); }());
+
+    if (typeof module !== "undefined" && module.exports) {
+        module.exports = ColorPicker;
+    } else if (typeof define === "function" && define.amd) {
+        define(function () { return ColorPicker; });
+    } else {
+        globals.ColorPicker = ColorPicker;
+    }
+}());
+(function () {
+    "use strict";
+    var Uploader = function () {
+        var dragAndDropArea = null,
+            defaultClass = null;
+
+        return {
+            init: function () {
+                dragAndDropArea = kml.args.container.getElementsByClassName("dragAndDropUploader")[0];
+                defaultClass = dragAndDropArea.className;
+                var inputFile = dragAndDropArea.getElementsByTagName("input")[0];
+
+                dragAndDropArea.ondragover = function () {
+                    angular.injector(["ng", "importKMLZones"]).get("clearService").clear();
+                    dragAndDropArea.className = defaultClass + " hoverArea";
+                    return false;
+                };
+                dragAndDropArea.ondragleave = function () {
+                    dragAndDropArea.className = defaultClass;
+                    return false;
+                };
+                dragAndDropArea.ondrop = function (event) {
+                    event.preventDefault();
+                    dragAndDropArea.className = defaultClass;
+
+                    var files = event.dataTransfer.files;
+                    kml.parseFiles(files);
+                };
+                dragAndDropArea.onclick = function () {
+                    inputFile.click();
+                };
+            },
+            clear: function () {
+                dragAndDropArea.className = defaultClass;
+            }
+        };
+    };
+
+    let globals = (function () { return this || (0, eval)("this"); }());
+
+    if (typeof module !== "undefined" && module.exports) {
+        module.exports = Uploader;
+    } else if (typeof define === "function" && define.amd) {
+        define(function () { return Uploader; });
+    } else {
+        globals.Uploader = Uploader;
+    }
+}());
+(function () {
+    "use strict";
+    var Waiting = function () {
+        var waitingElement = kml.args.container.querySelector("#waiting"),
+            opts = {
+                lines: 13 // The number of lines to draw
+                , length: 24 // The length of each line
+                , width: 14 // The line thickness
+                , radius: 42 // The radius of the inner circle
+                , scale: 1 // Scales overall size of the spinner
+                , corners: 1 // Corner roundness (0..1)
+                , color: "#000" // #rgb or #rrggbb or array of colors
+                , opacity: 0.25 // Opacity of the lines
+                , rotate: 0 // The rotation offset
+                , direction: 1 // 1: clockwise, -1: counterclockwise
+                , speed: 1 // Rounds per second
+                , trail: 60 // Afterglow percentage
+                , fps: 20 // Frames per second when using setTimeout() as a fallback for CSS
+                , zIndex: 2e9 // The z-index (defaults to 2000000000)
+                , className: "spinner" // The CSS class to assign to the spinner
+                , top: "50%" // Top position relative to parent
+                , left: "50%" // Left position relative to parent
+                , shadow: false // Whether to render a shadow
+                , hwaccel: false // Whether to use hardware acceleration
+                , position: "absolute" // Element positioning
+            },
+            target = waitingElement,
+            spinner = new Spinner(opts),
+            progressBarContainer = kml.args.container.querySelector("#progressContainer"),
+            progressBar = kml.args.container.querySelector("#importProgress");
+        return {
+            show: function () {
+                waitingElement.style.display = "";
+                spinner.spin(target);
+            },
+            hide: function () {
+                waitingElement.style.display = "none";
+                spinner.stop();
+            },
+            showProgressBar: function () {
+                progressBarContainer.style.display = "";
+                kml.args.container.style.overflow = "hidden";
+                kml.args.container.style.height = "100%";
+                progressBar.value = "0";
+            },
+            hideProgressBar: function () {
+                setTimeout(function () {
+                    if (progressBarContainer) {
+                        progressBarContainer.style.display = "none";
+                        kml.args.container.style.overflow = "";
+                        kml.args.container.style.height = "auto";
+                    }
+                }, 400);
+            },
+            updateProgressBar: function (value) {
+                if (progressBar) {
+                    progressBar.value += value;
+                }
+            }
+        };
+    };
+
+    let globals = (function () { return this || (0, eval)("this"); }());
+
+    if (typeof module !== "undefined" && module.exports) {
+        module.exports = Waiting;
+    } else if (typeof define === "function" && define.amd) {
+        define(function () { return Waiting; });
+    } else {
+        globals.Waiting = Waiting;
+    }
+}());

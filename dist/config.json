@@ -1,13 +1,13 @@
 {
-  "name": "Import KML Zones",
-  "supportEmail": "support@geotab.com",
-  "version": "1.0.0",
+  "name": "Import KML Zones (Enhanced)",
+  "supportEmail": "farinnugraha@geotab.com",
+  "version": "2.0.0",
   "items": [{
-    "url": "https://cdn.jsdelivr.net/gh/Geotab/sdk-addin-samples@master/addin-import-kml-zones/dist/importKmlZones.html",
+    "url": "https://farinnugraha.git.geotab.com/addin-enhanced-import-kml/importKmlZones.html",
     "path": "ZoneAndMessagesLink/",
     "menuName": {
-      "en": "Import KML Zones"
+      "en": "Import KML Zones (Enhanced)"
     },
-    "icon": "https://cdn.jsdelivr.net/gh/Geotab/sdk-addin-samples@master/addin-import-kml-zones/dist/images/icon.svg"
+    "icon": "https://farinnugraha.git.geotab.com/addin-enhanced-import-kml/images/icon.svg"
   }]
 }

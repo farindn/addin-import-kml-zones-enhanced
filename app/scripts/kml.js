@@ -1,5 +1,6 @@
 (function () {
     "use strict";
+    var DEG_PER_METER_LAT = 1 / (Math.PI / 180 * 6371000); // ~8.9932e-6 degrees per meter (constant at any latitude)
     var kml = {
         api: null,
         state: null,
@@ -8,6 +9,7 @@
         childCallback: {},
         minDate: new Date(Date.UTC(1986, 0, 1)),
         defaultZoneSize: 200,
+        defaultCorridorWidth: 100, // meters — buffer on each side of a LineString route
         localInit: ["addressLookup", "Address Lookup", "customer", "Customer", "office", "Office", "home", "Home"],
         isFormDataSupported: !!window.FormData,
         fileReader: null,
@@ -49,7 +51,8 @@
                 "zoneSize": this.defaultZoneSize,
                 "zoneColor": this.colorPickerObj.value(),
                 "zoneShape": false, //is not circle === square by default
-                "stoppedInsideZones": this.args.container.querySelector("#stoppedInsideZones").checked
+                "stoppedInsideZones": this.args.container.querySelector("#stoppedInsideZones").checked,
+                "corridorWidth": this.defaultCorridorWidth
             };
         },
         NOOP: function () {
@@ -202,8 +205,8 @@
             } else if (placemark.getElementsByTagName("name").length === 0) {
                 this.utils.showError("Name field required in " + fileName + ".");
                 return false;
-            } else if (!this.isPoint(placemark) && !this.isPolygon(placemark)) {
-                this.utils.showError(fileName + " must content a point or polygon data.");
+            } else if (!this.isPoint(placemark) && !this.isPolygon(placemark) && !this.isLineString(placemark)) {
+                this.utils.showError(fileName + " must contain point, polygon, or route (LineString) data.");
                 return false;
             }
             return true;
@@ -236,7 +239,7 @@
 
             this.zonesData.zones.forEach((zone, index) => {
                 zone.zoneParameters = this.getZoneParameters(zone);
-                var table = zone.zoneParameters.isPolygon ?
+                var table = (zone.zoneParameters.isPolygon || zone.zoneParameters.isLineString) ?
                     this.args.container.querySelector("#polygonList table") :
                     this.args.container.querySelector("#pointList table"),
                     tr, td, checkbox, isValid = isDataValid(zone.zoneParameters), colorDiv;
@@ -304,6 +307,80 @@
                 linearRing.length > 0 &&
                 linearRing[0].getElementsByTagName("coordinates").length > 0;
         },
+        isLineString: function (placemark) {
+            var lineString = placemark.getElementsByTagName("LineString");
+            return lineString.length > 0 &&
+                lineString[0].getElementsByTagName("coordinates").length > 0;
+        },
+        // Returns perpendicular offset at a line endpoint (from → to defines direction).
+        // coords are {lon, lat}; returns {dlon, dlat} in degrees.
+        _endCapOffset: function (from, to, bufferMeters) {
+            var lonScale = Math.cos(from.lat * Math.PI / 180);
+            var dx = (to.lon - from.lon) * lonScale;
+            var dy = to.lat - from.lat;
+            var len = Math.sqrt(dx * dx + dy * dy);
+            if (len === 0) { return { dlon: 0, dlat: 0 }; }
+            var px = -dy / len, py = dx / len; // left perpendicular unit vector
+            return {
+                dlon: px * bufferMeters * DEG_PER_METER_LAT / lonScale,
+                dlat: py * bufferMeters * DEG_PER_METER_LAT
+            };
+        },
+        // Returns miter-join offset at interior vertex p1, between segments p0→p1 and p1→p2.
+        // Caps miter length at 4× to prevent spikes at sharp turns.
+        _miterOffset: function (p0, p1, p2, bufferMeters) {
+            var lonScale = Math.cos(p1.lat * Math.PI / 180);
+            var d1x = (p1.lon - p0.lon) * lonScale, d1y = p1.lat - p0.lat;
+            var d2x = (p2.lon - p1.lon) * lonScale, d2y = p2.lat - p1.lat;
+            var len1 = Math.sqrt(d1x * d1x + d1y * d1y);
+            var len2 = Math.sqrt(d2x * d2x + d2y * d2y);
+            if (len1 === 0 || len2 === 0) {
+                return this._endCapOffset(len1 > 0 ? p0 : p1, len1 > 0 ? p1 : p2, bufferMeters);
+            }
+            var u1x = d1x / len1, u1y = d1y / len1;
+            var u2x = d2x / len2, u2y = d2y / len2;
+            // Left perpendiculars of each segment
+            var lp1x = -u1y, lp1y = u1x;
+            var lp2x = -u2y, lp2y = u2x;
+            // Miter bisector
+            var mx = lp1x + lp2x, my = lp1y + lp2y;
+            var mlen = Math.sqrt(mx * mx + my * my);
+            if (mlen < 1e-10) { mx = lp1x; my = lp1y; mlen = 1; }
+            mx /= mlen; my /= mlen;
+            // Miter correction factor (capped to prevent excessive spikes at sharp turns)
+            var dot = mx * lp1x + my * lp1y;
+            var miterLen = (Math.abs(dot) < 0.25) ? 4.0 : Math.min(4.0, 1.0 / dot);
+            return {
+                dlon: mx * bufferMeters * DEG_PER_METER_LAT / lonScale * miterLen,
+                dlat: my * bufferMeters * DEG_PER_METER_LAT * miterLen
+            };
+        },
+        // Converts an array of {lon, lat} LineString coordinates into a closed corridor polygon.
+        // Returns [{x: lon, y: lat}] in the format expected by the MyGeotab Zone API.
+        lineStringToCorridorPolygon: function (coords, bufferMeters) {
+            var n = coords.length, i, offset, leftSide = [], rightSide = [];
+            if (n < 2) { return []; }
+            bufferMeters = bufferMeters || this.options.corridorWidth || 100;
+            // Start cap — perpendicular from first segment only
+            offset = this._endCapOffset(coords[0], coords[1], bufferMeters);
+            leftSide.push({ x: coords[0].lon + offset.dlon, y: coords[0].lat + offset.dlat });
+            rightSide.push({ x: coords[0].lon - offset.dlon, y: coords[0].lat - offset.dlat });
+            // Interior miter joints
+            for (i = 1; i < n - 1; i++) {
+                offset = this._miterOffset(coords[i - 1], coords[i], coords[i + 1], bufferMeters);
+                leftSide.push({ x: coords[i].lon + offset.dlon, y: coords[i].lat + offset.dlat });
+                rightSide.push({ x: coords[i].lon - offset.dlon, y: coords[i].lat - offset.dlat });
+            }
+            // End cap — perpendicular from last segment (reversed direction)
+            offset = this._endCapOffset(coords[n - 1], coords[n - 2], bufferMeters);
+            leftSide.push({ x: coords[n - 1].lon + offset.dlon, y: coords[n - 1].lat + offset.dlat });
+            rightSide.push({ x: coords[n - 1].lon - offset.dlon, y: coords[n - 1].lat - offset.dlat });
+            // Build closed polygon: left side forward + right side reversed
+            rightSide.reverse();
+            var polygon = leftSide.concat(rightSide);
+            polygon.push(polygon[0]); // close the ring
+            return polygon;
+        },
         getZoneParameters: function (zone) {
             var desc = zone.getElementsByTagName("description"),
                 selfStyle = zone.getElementsByTagName("Style").length > 0 ? zone.getElementsByTagName("Style")[0] : null,
@@ -347,7 +424,8 @@
                 zoneShape: this.options.zoneShape,
                 mustIdentifyStops: this.options.stoppedInsideZones,
                 isPolygon: this.isPolygon(zone),
-                isPoint: this.isPoint(zone)
+                isPoint: this.isPoint(zone),
+                isLineString: this.isLineString(zone)
             };
         },
         getPoints: function (placemark) {
@@ -417,6 +495,20 @@
                         }
                     });
                 }
+            } else if (this.isLineString(placemark)) {
+                var lineString = placemark.getElementsByTagName("LineString")[0];
+                var coordText = lineString.getElementsByTagName("coordinates")[0].textContent.trim();
+                var rawCoords = coordText.split(/\s+/);
+                var lineCoords = [];
+                rawCoords.forEach(function (triplet) {
+                    if (!triplet) { return; }
+                    var parts = triplet.split(",");
+                    var lon = parseFloat(parts[0]), lat = parseFloat(parts[1]);
+                    if (!isNaN(lon) && !isNaN(lat)) {
+                        lineCoords.push({ lon: lon, lat: lat });
+                    }
+                });
+                points = kml.lineStringToCorridorPolygon(lineCoords, kml.options.corridorWidth);
             }
             return points;
         },
@@ -656,6 +748,12 @@
             this.options.zoneColor = this.colorPickerObj.value();
             this.options.transparencyValue = this.colorPicker.getTransparencyControl().get();
             this.options.stoppedInsideZones = this.args.container.querySelector("#stoppedInsideZones").checked;
+
+            var corridorWidthInput = this.args.container.querySelector("#corridorWidth");
+            if (corridorWidthInput) {
+                var parsed = parseInt(corridorWidthInput.value, 10);
+                this.options.corridorWidth = (!isNaN(parsed) && parsed > 0) ? parsed : this.defaultCorridorWidth;
+            }
 
             this.zonesData.zones.forEach(zone => {
                 zone.zoneParameters = this.getZoneParameters(zone);

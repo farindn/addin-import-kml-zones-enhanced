@@ -18,6 +18,9 @@
   <link rel="stylesheet" href="styles/style.css">
   <!-- endbuild -->
 
+  <!-- Zenith design tokens and base styles -->
+  <link rel="stylesheet" href="https://unpkg.com/@geotab/zenith@latest/dist/index.css">
+
   <!-- build:js scripts/vendor.js -->
   <!-- bower:js -->
   <script src="/bower_components/angular/angular.js"></script>
@@ -56,8 +59,8 @@
   </div>
 
   <div ng-controller="optionsController" id="optionsControllerElement" style="margin-top: 20px;">
-      <button ng-click="toggleModal()" class="geo-button">Options</button>
-      <button ng-click="clear()" class="geo-button">Clear</button>
+      <button ng-click="toggleModal()" class="geo-button zen-button">Options</button>
+      <button ng-click="clear()" class="geo-button zen-button">Clear</button>
       <modal-dialog show="modalShown">
           <ul class="geotabOptionsMenuElements">
               <li class="geotabOptionsMenuElement">
@@ -102,6 +105,18 @@
                   </div>
               </li>
               <li class="geotabOptionsMenuElement">
+                  <label for="corridorWidth">Route Corridor Width (m)</label>
+                  <div class="geotabOptionsMenuElementValue">
+                      <input type="number"
+                             id="corridorWidth"
+                             class="zen-input checkmateFormEditField"
+                             min="10" max="5000" step="10"
+                             ng-model="corridorWidthValue"
+                             title="Buffer on each side of the route in meters. Default: 100 m = 200 m total corridor width." />
+                      <small class="zen-text--secondary">Applies to LineString (route) geometries only.</small>
+                  </div>
+              </li>
+              <li class="geotabOptionsMenuElement">
                   <label for="stoppedInsideZones">Indicate stops within zone</label>
 
                   <div class="geotabOptionsMenuElementValue">
@@ -116,21 +131,22 @@
                   </div>
               </li>
               <li class="geotabOptionsMenuElement">
-                  <button class="geo-button geo-button--action" ng-click="applyOptions()">Apply</button>
-                  <button class="geo-button" ng-click="setDefaultOptions()">Set defaults</button>
+                  <button class="geo-button geo-button--action zen-button zen-button--primary" ng-click="applyOptions()">Apply</button>
+                  <button class="geo-button zen-button" ng-click="setDefaultOptions()">Set defaults</button>
               </li>
           </ul>
       </modal-dialog>
   </div>
 
   <div id="imporKMLZonesFormContainer" class="extern" style="margin-top: 20px;" ng-controller='parsedDataController'>
-      <div class="dragAndDropUploader uploaderElementsContainer">
-          <span class="dragAndDropTitle">{{uploaderTitle}}</span>
+      <div class="zen-upload-area dragAndDropUploader uploaderElementsContainer">
+          <span class="zen-upload-area__title dragAndDropTitle">{{uploaderTitle}}</span>
+          <span class="zen-upload-area__subtitle">Accepts .kml from Google My Maps — including route (LineString) exports</span>
           <input class="uploadFileElement" type="file" multiple="true" ng-model="upload"
                  onchange="angular.element(this).scope().uploadFiles(event)" onclick="this.value = null;">
       </div>
 
-      <div class="errorMessage" id="errorMessage" style="display: none;">
+      <div class="errorMessage zen-banner zen-banner--error" id="errorMessage" style="display: none;">
 
       </div>
 
@@ -139,21 +155,21 @@
               <progress max="100" value="0" id="importProgress"></progress>
           </div>
           <div class="importToolbar" style="width: 100%; padding: 10px 0 0 0; text-align: right;">
-              <button class="geo-button" ng-click="exportKML()" id="exportKML" style="display: none;">Save not
+              <button class="geo-button zen-button" ng-click="exportKML()" id="exportKML" style="display: none;">Save not
                   imported zones to kml file
               </button>
               <input type="checkbox" class="geotabSwitchButton" id="hideImported" ng-click="hideImported($event)">
-              <label class="geo-button" for="hideImported" id="hideImportedLabel" style="display: none;">Hide imported</label>
-              <button class="geo-button geo-button--action" ng-click="importSelectedZones()" id="importButton"
+              <label class="geo-button zen-button" for="hideImported" id="hideImportedLabel" style="display: none;">Hide imported</label>
+              <button class="geo-button geo-button--action zen-button zen-button--primary" ng-click="importSelectedZones()" id="importButton"
                       style="display: none;">Import selected zones
               </button>
               <input type="checkbox" class="geotabSwitchButton" id="selectAll" ng-click="selectAll($event)">
-              <label class="geo-button" for="selectAll" id="selectAllLabel" style="display: none;">Select all</label>
+              <label class="geo-button zen-button" for="selectAll" id="selectAllLabel" style="display: none;">Select all</label>
           </div>
           <div id="polygonList" style="display: none;">
               <table class="checkmateListTable">
                   <thead>
-                  <th colspan="4">Polygon Zones</th>
+                  <th colspan="4">Polygon &amp; Route Corridor Zones</th>
                   </thead>
                   <tbody>
                   <tr>

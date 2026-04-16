@@ -79,6 +79,7 @@ var angularObj = {
                 $scope.colorPickerValue = kml.colorPicker.getPicker().getHexValue();
                 $scope.transparencySliderValue = $scope.transparencySliderValue ||
                     kml.colorPicker.getDefaultTransparencyValue();
+                $scope.corridorWidthValue = $scope.corridorWidthValue || kml.options.corridorWidth || kml.defaultCorridorWidth;
 
                 if (kml.utils.inputTypeSupport("range", "a")) {
                     container.querySelector(".vanillaSlider").value = $scope.transparencySliderValue;
@@ -144,6 +145,7 @@ var angularObj = {
                 kml.setDefaultOptions();
                 $scope.colorPickerValue = kml.colorPicker.getDefaultColorHex();
                 $scope.transparencySliderValue = kml.colorPicker.getDefaultTransparencyValue();
+                $scope.corridorWidthValue = kml.defaultCorridorWidth;
                 if (kml.utils.inputTypeSupport("range", "a")) {
                     container.querySelector(".vanillaSlider").value = $scope.transparencySliderValue;
                 }

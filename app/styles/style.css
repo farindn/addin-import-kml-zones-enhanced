@@ -436,3 +436,46 @@ input[type="range"].vanillaSlider::-ms-track {
     user-select: none;
     /* Non-prefixed version, currently supported by Chrome, Edge, Opera and Firefox */
 }
+
+/* ── Zenith-aligned additions ── */
+
+/* Upload area — Zenith design tokens with fallback values */
+.zen-upload-area {
+    border: 2px dashed var(--zen-color-primary, #0072c6);
+    border-radius: 8px;
+    padding: 32px 24px;
+    text-align: center;
+    background: #f8fbff;
+    transition: background 0.2s, border-color 0.2s;
+}
+.zen-upload-area.hoverArea {
+    background: #e3f0ff;
+    border-color: #005ea2;
+}
+.zen-upload-area__title {
+    display: block;
+    font-size: 1.1em;
+    font-weight: 600;
+    color: var(--zen-color-primary, #0072c6);
+    margin: 8px 0 4px;
+}
+.zen-upload-area__subtitle {
+    display: block;
+    font-size: 0.85em;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+/* Helper text for option inputs */
+.zen-text--secondary {
+    font-size: 0.8em;
+    color: #666;
+    display: block;
+    margin-top: 4px;
+}
+
+/* Corridor Width input width */
+#corridorWidth {
+    width: 90px;
+    text-align: right;
+}
