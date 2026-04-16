@@ -41,7 +41,7 @@ The add-in runs entirely in the browser — no server or backend required. All K
 | `<Point>` geometry | Yes | Yes |
 | `<Polygon>` geometry | Yes | Yes |
 | `<LineString>` geometry | No — rejected with error | **Yes — converted to corridor zone** |
-| Corridor width control | — | **Configurable (default 100 m per side)** |
+| Corridor width control | — | **Configurable (default 15 m per side, range 10–50 m)** |
 | UI design system | Legacy Checkmate CSS | **Zenith design tokens** |
 | Upload area subtitle | None | **Descriptive hint text** |
 | Polygon table label | "Polygon Zones" | **"Polygon & Route Corridor Zones"** |
@@ -96,12 +96,14 @@ addin-import-kml-zones-enhanced/
 ```json
 {
   "name": "Import KML Zones (Enhanced)",
-  "supportEmail": "your@email.com",
-  "version": "2.0.0",
+  "supportEmail": "farinnugraha@geotab.com",
+  "version": "3.4.0",
+  "isSigned": false,
   "items": [{
     "url": "https://farindn.github.io/addin-import-kml-zones-enhanced/importKmlZones.html",
     "path": "ZoneAndMessagesLink/",
-    "menuName": { "en": "Import KML Zones (Enhanced)" },
+    "category": "ZonesId",
+    "menuName": { "en": "Import KML Zones" },
     "icon": "https://farindn.github.io/addin-import-kml-zones-enhanced/images/icon.svg"
   }]
 }
@@ -127,7 +129,7 @@ The add-in appears under **Zones & Messages → Import KML Zones (Enhanced)**.
 3. *(Optional)* Click **Options** to configure:
    - **Types** — zone type (Customer, Home, Office, etc.)
    - **Color** — fill colour for imported zones
-   - **Route Corridor Width** — buffer distance in metres applied to each side of a LineString route (default: 100 m = 200 m total corridor width)
+   - **Route Corridor Width** — buffer distance in metres applied to each side of a LineString route (default: 15 m per side = 30 m total corridor width, range: 10–50 m)
    - **Indicate stops within zone** — whether stops inside the zone are flagged
 4. Review the parsed zones in the tables:
    - **Point Zones** — `<Point>` placemarks (e.g., start/end markers)
@@ -165,11 +167,12 @@ The buffer algorithm converts a sequence of `(lon, lat)` coordinates into a clos
 
 | Step | Description |
 |---|---|
-| 1. End cap (start) | Perpendicular offset at the first segment, ±`corridorWidth` metres |
-| 2. Interior miter | At each interior vertex, bisect the two adjacent segments; scale offset by `1 / cos(θ/2)` |
-| 3. Miter cap | Cap miter scale at 4× to limit spike height at sharp corners |
-| 4. End cap (end) | Perpendicular offset at the last segment |
-| 5. Close polygon | Left side (forward) + right side (reversed) + closing point |
+| 1. Simplification | Ramer-Douglas-Peucker with 5 m tolerance removes redundant points (800+ point exports reduced to 50–100 waypoints) |
+| 2. End cap (start) | Perpendicular offset at the first segment, ±`corridorWidth` metres |
+| 3. Interior miter | At each interior vertex, bisect the two adjacent segments; scale offset by `1 / cos(θ/2)` |
+| 4. Miter cap | Cap miter scale at 4× to limit spike height at sharp corners |
+| 5. End cap (end) | Perpendicular offset at the last segment |
+| 6. Close polygon | Left side (forward) + right side (reversed) + closing point |
 
 **Coordinate conversion** uses the equirectangular approximation:
 
@@ -178,7 +181,7 @@ DEG_PER_METER_LAT = 1 / (π/180 × 6,371,000)   ≈ 8.9932×10⁻⁶ °/m
 DEG_PER_METER_LON = DEG_PER_METER_LAT / cos(lat)
 ```
 
-This is accurate to within 0.1% for routes up to ~200 km.
+The result is accurate for small corridors (under 1 km) at mid-latitudes (target deployment: Southeast Asia, ~±20° latitude). For very long routes or high latitudes, accuracy decreases.
 
 ### Supported KML geometry
 
@@ -187,7 +190,6 @@ This is accurate to within 0.1% for routes up to ~200 km.
 | `<Point>` | Circular zone centred at the point coordinate |
 | `<Polygon>` | Polygon zone using the `<outerBoundaryIs>` ring |
 | `<LineString>` | Corridor polygon via buffer algorithm |
-| `<MultiGeometry>` | Decomposed into individual geometries (each handled above) |
 
 ### Build
 
@@ -229,10 +231,10 @@ To deploy your own fork:
 
 ## Known Limitations
 
-- **Equirectangular projection** — accurate for routes up to ~200 km; error increases for very long routes spanning multiple degrees of latitude.
+- **Equirectangular projection** — accurate for small corridors (under 1 km) at mid-latitudes. For very long routes or high latitudes, the approximation degrades and a proper geodesic library should be used instead.
 - **Extreme hairpin turns** — the 4× miter cap limits spike height but does not resolve polygon self-intersections at U-turns. Visually distorted polygons may result for very sharp angles.
 - **Altitude ignored** — `<LineString>` coordinates with a third (altitude) component are supported; the altitude value is silently ignored.
-- **No KML styling** — colour, icon, and style definitions inside the KML file are not read; zone colour is set via the Options panel.
+- **Partial KML styling** — fill colour is read from the KML `<PolyStyle>` element (ABGR format). Icon styles and stroke styles are not applied; zone colour can always be overridden via the Options panel.
 - **AngularJS 1.x** — inherited from the original Geotab SDK sample. The add-in is not compatible with React or Vue frameworks without a full rewrite.
 - **Single file upload per session** — uploading a second file replaces the first. Use **Clear** between uploads if needed.
 
