@@ -1,7 +1,37 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// kml.js — Core add-in logic  (doc §6.2)
+//
+// The kml object is the central state store and logic hub. It owns:
+//   • KML file parsing and geometry conversion (Polygon, LineString, Point)
+//   • The corridor-polygon algorithm (doc §7.3)
+//   • Zone table population and per-row import lifecycle
+//   • MyGeotab API batch-call orchestration
+//   • Options apply / reset
+//
+// All sub-components (Uploader, ColorPicker, VanillaSlider, Waiting, Utils)
+// are constructed in initVariables() and stored as kml.* properties so any
+// function in the object can reference them without circular dependencies.
+//
+// Exposed as a global (kml) in add-in context; also supports CommonJS and
+// AMD for unit-test environments.
+// ─────────────────────────────────────────────────────────────────────────────
 (function () {
     "use strict";
-    var DEG_PER_METER_LAT = 1 / (Math.PI / 180 * 6371000); // ~8.9932e-6 degrees per meter (constant at any latitude)
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Module-level constants
+    // ─────────────────────────────────────────────────────────────────────────
+    // Degrees of latitude per metre, derived from the WGS-84 mean Earth radius.
+    // Longitude is latitude-dependent and is scaled by cos(lat) at each use.
+    // Accurate to better than 0.1% for distances under 1 km at mid-latitudes
+    // (target deployment: Southeast Asia, ~±20°). See doc §10.3 for limits.
+    var DEG_PER_METER_LAT = 1 / (Math.PI / 180 * 6371000); // ~8.9932e-6 °/m
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // kml — central state store and logic hub
+    // ─────────────────────────────────────────────────────────────────────────
     var kml = {
+        // — Object state properties ——————————————————————————————————————————
         api: null,
         state: null,
         args: {},
@@ -9,7 +39,7 @@
         childCallback: {},
         minDate: new Date(Date.UTC(1986, 0, 1)),
         defaultZoneSize: 200,
-        defaultCorridorWidth: 15, // meters — buffer on each side of a LineString route
+        defaultCorridorWidth: 15, // half-width buffer in metres for LineString corridors (range: 10–50)
         localInit: ["addressLookup", "Address Lookup", "customer", "Customer", "office", "Office", "home", "Home"],
         isFormDataSupported: !!window.FormData,
         fileReader: null,
@@ -24,8 +54,21 @@
         vanillaSlider: null,
         waiting: null,
         importedInBG: [],
+        // Deliberate batch cap: MyGeotab's multiCall API becomes unstable
+        // above ~100 entities per call. 50 provides headroom for large KML files
+        // while keeping each call well within server timeout limits.
         itemsPerCall: 50,
         defaultZoneType: "ZoneTypeCustomerId",
+        // ─────────────────────────────────────────────────────────────────────
+        // Initialization  (doc §6.2 → initVariables)
+        // ─────────────────────────────────────────────────────────────────────
+        /**
+         * Wires all sub-components and sets initial option values.
+         * Called once from the MyGeotab add-in initialize() callback.
+         *
+         * @param {Object} api   - MyGeotab API object (api.call, api.multiCall).
+         * @param {Object} state - MyGeotab state object (state.getGroupFilter).
+         */
         initVariables: function (api, state) {
             this.api = api;
             this.state = state;
@@ -38,6 +81,8 @@
             this.uploader = new Uploader();
             this.vanillaSlider = new VanillaSlider();
             this.waiting = new Waiting();
+            // Collect "extern" DOM elements by id into this.args so controllers
+            // can reference them by name without repeated querySelectorAll calls.
             Array.prototype.forEach.call(this.args.container.parentNode.getElementsByClassName("extern"),
                 element => {
                     if (element.id) {
@@ -51,13 +96,24 @@
                 "zoneTypes": [this.defaultZoneType],
                 "zoneSize": this.defaultZoneSize,
                 "zoneColor": this.colorPickerObj.value(),
-                "zoneShape": false, //is not circle === square by default
+                "zoneShape": false, // square by default — circle is not the common case
                 "stoppedInsideZones": this.args.container.querySelector("#stoppedInsideZones").checked,
                 "corridorWidth": this.defaultCorridorWidth
             };
         },
         NOOP: function () {
         },
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Zone type utilities
+        // ─────────────────────────────────────────────────────────────────────
+        /**
+         * Converts a flat key–value array into a lookup object.
+         * Throws if the array length is odd or if a key is duplicated.
+         *
+         * @param {Array<string>} data - Alternating [key, value, …] pairs.
+         * @returns {Object} Lookup map: { key: value }.
+         */
         setupLocal: function (data) {
             var i, fixed = {}, item;
             if (data.length % 2 !== 0) {
@@ -72,6 +128,16 @@
             }
             return fixed;
         },
+        /**
+         * Ensures the four built-in Geotab zone types (Customer, Office, Home,
+         * Address Lookup) are present in the zone-type list. If the API returns
+         * them as plain ID strings they are normalised to { id, name, isSystem }
+         * objects. If none were returned at all they are appended.
+         *
+         * @param {Array}   a                  - Zone type list from api.call Get ZoneType.
+         * @param {boolean} ignoreAddressLookup - Omit Address Lookup from the result.
+         * @returns {Array} Normalised zone type list with system types guaranteed.
+         */
         addSystemZoneTypes: function (a, ignoreAddressLookup) {
             var zoneTypes = {
                 "ZoneTypeAddressLookupId": this.local.addressLookup,
@@ -117,6 +183,16 @@
             }
             return a;
         },
+        // ─────────────────────────────────────────────────────────────────────
+        // Point zone shape factory  (doc §7.1 — Point geometry)
+        // ─────────────────────────────────────────────────────────────────────
+        /**
+         * Returns a { getZonePoints } factory used to expand a KML Point
+         * coordinate into a small area zone. Square is the default; circle uses
+         * a polygon approximation with enough sides for a smooth appearance.
+         *
+         * @returns {{ getZonePoints: function(lat, lng, diameter, isCircle): Array }}
+         */
         zoneShapeCreator: function () {
             var squareZoneCreator = function (lat, lng, size) {
                 var halfSide = (size / 2) || 0.0009,
@@ -164,6 +240,17 @@
                 }
             };
         },
+        // ─────────────────────────────────────────────────────────────────────
+        // File parsing  (doc §6.2 → parseFiles / parseKML)
+        // ─────────────────────────────────────────────────────────────────────
+        /**
+         * Reads each dropped or selected file sequentially using FileReader and
+         * delegates to isFileDataValid() + populateZoneTables() on completion.
+         * Sequential reads (not parallel) are used so the waiting spinner
+         * correctly represents overall progress.
+         *
+         * @param {FileList} files - Files from a drop event or file input.
+         */
         parseFiles: function (files) {
             var filesCount = files.length,
                 filesLoaded = 0;
@@ -198,6 +285,16 @@
             };
             this.fileReader.readAsText(files[0]);
         },
+        /**
+         * Validates that the parsed DOM is a KML document with at least one
+         * named Placemark of a supported geometry type. DOMParser silently
+         * returns a document with a <parsererror> element on XML parse failure;
+         * that case is caught by the tagName check below.
+         *
+         * @param {Document} kmlDoc  - Parsed XML document from DOMParser.
+         * @param {string}   fileName - Used in user-visible error messages.
+         * @returns {boolean} True if the document contains valid zone data.
+         */
         isFileDataValid: function (kmlDoc, fileName) {
             var placemark = kmlDoc.documentElement.querySelector("Placemark");
             if (kmlDoc.documentElement.tagName.toLowerCase() !== "kml" || !placemark) {
@@ -212,6 +309,15 @@
             }
             return true;
         },
+        // ─────────────────────────────────────────────────────────────────────
+        // Table population  (doc §6.2 → populateZoneTables)
+        // ─────────────────────────────────────────────────────────────────────
+        /**
+         * Iterates parsed zones and appends one table row per zone — polygons
+         * and corridors go to #polygonList, points to #pointList. Invalid zones
+         * (empty name, bad coordinates) are rendered with class "error" and a
+         * descriptive message; valid zones get a checked importCheckbox.
+         */
         populateZoneTables: function () {
             var hasValidZones = false,
                 isDataValid = function (data) {
@@ -295,6 +401,12 @@
                 this.args.container.querySelector("#selectAllLabel").style.display = "";
             }
         },
+        // ─────────────────────────────────────────────────────────────────────
+        // Geometry type detection  (doc §7.1)
+        // ─────────────────────────────────────────────────────────────────────
+        // Each predicate checks for the presence and structure of the relevant
+        // KML element rather than relying on a type attribute, because KML
+        // files from different sources do not use a consistent type field.
         isPoint: function (placemark) {
             var point = placemark.getElementsByTagName("Point");
             return point.length > 0 && point[0].getElementsByTagName("coordinates").length > 0;
@@ -313,6 +425,22 @@
             return lineString.length > 0 &&
                 lineString[0].getElementsByTagName("coordinates").length > 0;
         },
+        // ─────────────────────────────────────────────────────────────────────
+        // Corridor geometry helpers  (doc §7.3)
+        // ─────────────────────────────────────────────────────────────────────
+        // These four private methods implement the corridor-polygon algorithm.
+        // They are prefixed with _ to signal internal use; they are not called
+        // outside of lineStringToCorridorPolygon.
+
+        /**
+         * Returns the perpendicular distance from point to a line segment
+         * (lineStart → lineEnd) in metres. Used by _simplifyCoords.
+         *
+         * @param {{lon, lat}} point
+         * @param {{lon, lat}} lineStart
+         * @param {{lon, lat}} lineEnd
+         * @returns {number} Distance in metres.
+         */
         // Perpendicular distance from point to line segment (lineStart→lineEnd) in metres.
         _perpDistanceMeters: function (point, lineStart, lineEnd) {
             var lonScale = Math.cos(point.lat * Math.PI / 180);
@@ -386,6 +514,23 @@
                 dlat: my * bufferMeters * DEG_PER_METER_LAT * miterLen
             };
         },
+        // ─────────────────────────────────────────────────────────────────────
+        // Corridor polygon assembly  (doc §7.3)
+        // ─────────────────────────────────────────────────────────────────────
+        /**
+         * Converts a LineString coordinate array into a closed corridor polygon
+         * suitable for the MyGeotab Zone API. Algorithm steps:
+         *   1. Simplify with Ramer–Douglas–Peucker (5 m tolerance).
+         *   2. Compute perpendicular end-cap offsets at the first and last vertex.
+         *   3. Compute miter-join offsets at each interior vertex (capped at 4×
+         *      to prevent spikes at sharp turns < ~14°).
+         *   4. Concatenate left side (forward) + right side (reversed) and close
+         *      the ring by repeating the first point.
+         *
+         * @param {Array<{lon: number, lat: number}>} coords - At least 2 points.
+         * @param {number} bufferMeters - Half-width of corridor in metres.
+         * @returns {Array<{x: number, y: number}>} Closed polygon ring.
+         */
         // Converts an array of {lon, lat} LineString coordinates into a closed corridor polygon.
         // Returns [{x: lon, y: lat}] in the format expected by the MyGeotab Zone API.
         lineStringToCorridorPolygon: function (coords, bufferMeters) {
@@ -417,6 +562,23 @@
             polygon.push(polygon[0]); // close the ring
             return polygon;
         },
+        // ─────────────────────────────────────────────────────────────────────
+        // Zone metadata extraction  (doc §6.2 → getZoneParameters)
+        // ─────────────────────────────────────────────────────────────────────
+        /**
+         * Extracts all Zone API fields from a <Placemark> element. Style lookup
+         * follows the KML precedence: inline <Style> overrides a shared <Style>
+         * resolved via <styleUrl>. If no PolyStyle color is found, the zone
+         * color from the Options panel is used (colorFromOptions = true).
+         *
+         * KML encodes color in ABGR byte order (not standard RGBA). The bytes
+         * are reversed here before constructing the Geotab color object.
+         * Example: "7f0000ff" → alpha 0x7f (127), blue 0x00, green 0x00, red 0xff
+         * → { r: 255, g: 0, b: 0, a: 127 } (semi-transparent red).
+         *
+         * @param {Element} zone - A KML <Placemark> DOM element.
+         * @returns {Object} Zone parameters object for the MyGeotab Zone API.
+         */
         getZoneParameters: function (zone) {
             var desc = zone.getElementsByTagName("description"),
                 selfStyle = zone.getElementsByTagName("Style").length > 0 ? zone.getElementsByTagName("Style")[0] : null,
@@ -464,6 +626,22 @@
                 isLineString: this.isLineString(zone)
             };
         },
+        // ─────────────────────────────────────────────────────────────────────
+        // Geometry extraction  (doc §6.2 → getPoints / doc §7.1, §10.2)
+        // ─────────────────────────────────────────────────────────────────────
+        /**
+         * Routes geometry extraction to the appropriate handler based on the
+         * Placemark element's geometry type.
+         *
+         * Donut polygon (outer + inner boundary): the inner boundary is stitched
+         * to the outer ring by finding the minimum-distance outer–inner vertex
+         * pair using a Haversine distance function. This is O(n × m) where n
+         * and m are the outer and inner vertex counts. Acceptable for typical
+         * Google My Maps exports (< 500 vertices per ring). See doc §10.2.
+         *
+         * @param {Element} placemark - A KML <Placemark> DOM element.
+         * @returns {Array<{x: number, y: number}>} Point array for the Zone API.
+         */
         getPoints: function (placemark) {
             var coordinates = "",
                 points = [],
@@ -548,6 +726,9 @@
             }
             return points;
         },
+        // ─────────────────────────────────────────────────────────────────────
+        // Row state management  (doc §9 — Import API errors)
+        // ─────────────────────────────────────────────────────────────────────
         markRowSuccess: function (rowId, zoneId) {
             var row = document.getElementById("row" + rowId),
                 link = document.createElement("a"),
@@ -589,6 +770,18 @@
                 this.args.container.querySelector("#selectAllLabel").style.display = "none";
             }
         },
+        // ─────────────────────────────────────────────────────────────────────
+        // Import — batch API calls  (doc §6.2 → importZones / saveZones)
+        // ─────────────────────────────────────────────────────────────────────
+        /**
+         * Splits zonesToImport into sequential multiCall batches of at most
+         * itemsPerCall (50) zones, sending the next batch only after the
+         * previous one completes. Progress bar is updated proportionally.
+         * Each batch result marks individual rows as imported or error.
+         *
+         * @param {Array<Object>} zonesToImport - Zone parameter objects including
+         *   a rowId property for table row lookup.
+         */
         saveZones: function (zonesToImport) {
             var calls = [], callsParts = [], pushedCalls = 0, sentParts = 0,
                 doAfterCall = callLength => {
@@ -651,6 +844,12 @@
             this.waiting.showProgressBar();
             sendQuery(callsParts[0]);
         },
+        /**
+         * Flushes the importedInBG queue built up while the add-in container
+         * was not in the DOM (e.g. the user navigated away during import).
+         * Called on window focus so the UI is updated the next time the user
+         * returns to the add-in.
+         */
         updateImportedInBG: function () {
             this.importedInBG.every(importedInBG => {
                 if (importedInBG.id !== undefined) {
@@ -739,6 +938,9 @@
                 checkboxes[i].checked = (!!event.currentTarget.checked);
             }
         },
+        // ─────────────────────────────────────────────────────────────────────
+        // State reset  (doc §6.2 → clear)
+        // ─────────────────────────────────────────────────────────────────────
         clearDataTables: function () {
             var removeRows = tableId => {
                 var table = this.args.container.querySelector("#" + tableId + " table"),
@@ -763,6 +965,15 @@
             this.args.container.querySelector("#selectAllLabel").style.display = "none";
             this.utils.hideError();
         },
+        // ─────────────────────────────────────────────────────────────────────
+        // Options management  (doc §8)
+        // ─────────────────────────────────────────────────────────────────────
+        /**
+         * Reads all current values from the Options modal inputs and writes
+         * them to kml.options. Also re-derives zoneParameters for every already-
+         * parsed zone so color and type changes are reflected immediately in the
+         * table without requiring a re-upload.
+         */
         applyOptions: function () {
             var selectedTypes = this.args.container.querySelector("#typesSelect").selectedOptions ||
                 this.utils.getSelectValues(this.args.container.querySelector("#typesSelect")),
@@ -815,6 +1026,11 @@
         }
     };
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // UMD export — CommonJS / AMD / browser global
+    // ─────────────────────────────────────────────────────────────────────────
+    // In the MyGeotab add-in (browser) the object is attached to window as
+    // kml. CommonJS and AMD paths support unit testing outside the browser.
     let globals = (function () { return this || (0, eval)("this"); }());
 
     if (typeof module !== "undefined" && module.exports) {

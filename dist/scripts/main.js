@@ -1,4 +1,16 @@
 "use strict";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// app.js — AngularJS module bootstrap  (doc §6.1)
+//
+// Declares the "importKMLZones" Angular module and registers all components:
+//   • modalDialog   — custom <modal-dialog> element directive
+//   • clearService  — shared singleton that delegates to kml.clear()
+//   • optionsController   — Options modal (zone types, colour, corridor width)
+//   • parsedDataController — upload area and zone import table
+//
+// Called once during add-in initialise() via angularObj.initAngular().
+// ─────────────────────────────────────────────────────────────────────────────
 var angularObj = {
     app: null,
     initAngular: function () {
@@ -6,14 +18,22 @@ var angularObj = {
 
         angularObj.app = angular.module("importKMLZones", []);
 
+        // ─────────────────────────────────────────────────────────────────────
+        // modalDialog directive
+        // ─────────────────────────────────────────────────────────────────────
+        // Custom element (<modal-dialog show="...">) for the Options modal.
+        // Uses an isolated scope with two-way `show` binding so opening/closing
+        // the modal is controlled from the parent optionsController.
+        // Template content is transcluded from the parent, allowing the modal
+        // body to live in the parent controller's scope.
         angularObj.app.directive("modalDialog", function () {
             return {
                 restrict: "E",
                 scope: {
-                    show: "="
+                    show: "="  // two-way binding on modalShown from parent
                 },
-                replace: true, // Replace with the template below
-                transclude: true, // we want to insert custom content inside the directive
+                replace: true,
+                transclude: true // modal content comes from parent scope
                 link: function (scope, element, attrs) {
                     scope.dialogStyle = {};
                     if (attrs.width) {
@@ -36,6 +56,12 @@ var angularObj = {
             };
         });
 
+        // ─────────────────────────────────────────────────────────────────────
+        // clearService
+        // ─────────────────────────────────────────────────────────────────────
+        // Shared singleton that delegates to kml.clear(). Injected into both
+        // optionsController and parsedDataController so either can reset the
+        // upload state without coupling the controllers to each other.
         angularObj.app.service("clearService", function () {
             var clearService = {};
             clearService.clear = function () {
@@ -44,9 +70,18 @@ var angularObj = {
             return clearService;
         });
 
+        // ─────────────────────────────────────────────────────────────────────
+        // optionsController
+        // ─────────────────────────────────────────────────────────────────────
+        // Manages the Options modal. Owns zone type selection, colour picker
+        // state, transparency slider, corridor-width validation, and the
+        // apply / set-defaults actions. All responsibilities are consolidated
+        // here because the MyGeotab add-in pattern uses a single controller
+        // per HTML region rather than decomposed sub-controllers.
         angularObj.app.controller("optionsController", ["$scope", "clearService", function ($scope, clearService) {
             $scope.modalShown = false;
 
+            // — Zone types ——————————————————————————————————————————————————
             $scope.toggleModal = function () {
                 var showZoneTypes = function (zoneTypes) {
                     $scope.zoneTypeOptions = [];
@@ -60,12 +95,13 @@ var angularObj = {
                         });
                     });
                     $scope.$apply();
-                    //set default type value if selection is empty
+                    // Iterate with every() so we can break early — returning false
+                    // stops the loop once the default type is pre-selected.
                     kml.options.zoneTypes.every(function (type, index) {
                         let typesSelect = container.querySelector("#typesSelect");
                         if (type === kml.defaultZoneType && typesSelect.selectedIndex === -1) {
                             typesSelect.selectedIndex = index;
-                            return false;
+                            return false; // break — every() stops on the first false
                         }
                         return true;
                     });
@@ -76,14 +112,22 @@ var angularObj = {
                 }, function () {
                     showZoneTypes(kml.addSystemZoneTypes([], true));
                 });
+                // — Color picker & transparency slider ————————————————————————
+                // Sync the Angular model to the current picker state each time
+                // the modal opens so the UI reflects any programmatic changes
+                // made since the last open (e.g. setDefaultOptions).
                 $scope.colorPickerValue = kml.colorPicker.getPicker().getHexValue();
                 $scope.transparencySliderValue = $scope.transparencySliderValue ||
                     kml.colorPicker.getDefaultTransparencyValue();
                 $scope.corridorWidthValue = $scope.corridorWidthValue || kml.options.corridorWidth || kml.defaultCorridorWidth;
 
+                // Update the native range input when it is supported; the
+                // vanillaSlider fallback manages its own state internally.
                 if (kml.utils.inputTypeSupport("range", "a")) {
                     container.querySelector(".vanillaSlider").value = $scope.transparencySliderValue;
                 }
+                // Live-update the picker's alpha channel and the swatch preview
+                // as the user drags the slider, keeping Angular in sync via $apply.
                 angular.element(container.querySelector("input.vanillaSlider")).on("input", function (event) {
                     var val = event.target.value;
                     $scope.transparencySliderValue = Number(val);
@@ -92,8 +136,14 @@ var angularObj = {
                     $scope.$apply();
                 });
 
+                // — Color picker backend selection ————————————————————————————
+                // inputTypeSupport("color", "hello world") returns false when
+                // the browser does not natively support input[type=color] (e.g.
+                // Internet Explorer). In that case jscolor is used instead and
+                // requires manual show/hide management on focus/blur.
                 var colorPickerField = container.querySelector("#colorPickerField");
                 if (!kml.utils.inputTypeSupport("color", "hello world")) {
+                    // jscolor fallback: open picker on focus, persist value on blur.
                     angular.element(colorPickerField).on("focus", function () {
                         kml.colorPicker.getPicker().originalPicker.showPicker(this);
                     });
@@ -110,6 +160,8 @@ var angularObj = {
                         }
                     });
                 } else {
+                    // Native input[type=color]: browser handles the picker UI;
+                    // only the change event is needed to push the value to jscolor.
                     angular.element(colorPickerField).on("change", function () {
                         kml.colorPicker.getPicker().setValue(kml.utils.hexToRGBArray(this.value));
                     });
@@ -135,12 +187,20 @@ var angularObj = {
                 }
                 event.target.checked = true;
             };
+            // — Corridor width validation ———————————————————————————————————
+            // AngularJS stops updating $scope.corridorWidthValue when
+            // input[type=number] violates its min/max attributes — the model
+            // freezes at the last valid value. Reading the raw DOM value via
+            // document.getElementById() returns what the user actually typed,
+            // enabling real-time validation regardless of Angular model state.
             $scope.corridorWidthInvalid = function () {
                 var input = document.getElementById('corridorWidth');
                 var v = input ? parseFloat(input.value) : NaN;
                 return isNaN(v) || v < 10 || v > 50;
             };
             $scope.applyOptions = function () {
+                // Guard against invalid corridor width reaching kml.applyOptions()
+                // even if ng-disabled is bypassed (e.g., programmatic form submit).
                 if ($scope.corridorWidthInvalid()) { return; }
                 kml.applyOptions();
                 container.style.overflow = "";
@@ -159,16 +219,24 @@ var angularObj = {
             $scope.clear = function () {
                 clearService.clear();
             };
+            // — Zone type multi-select ————————————————————————————————————————
+            // The browser's default <select multiple> toggles the clicked item
+            // before the mousedown handler fires, so prevSelectedTypes cannot be
+            // reliably re-applied synchronously. setTimeout(fn, 0) defers the
+            // restoration to the next event-loop tick, after the browser has
+            // finished processing the click, so the full previous selection can
+            // be restored and the toggle-off logic applied cleanly.
             $scope.selectType = function (event) {
                 var i, unselect = null,
                     typesSelect = container.querySelector("#typesSelect");
                 kml.prevSelectedTypes = kml.prevSelectedTypes || [];
                 setTimeout(function () {
-                    //select all previously selected items
+                    // Re-apply all previously selected options after the browser
+                    // has processed the native click (deferred to next tick).
                     for (i = 0; i < kml.prevSelectedTypes.length; i++) {
                         typesSelect.options[kml.prevSelectedTypes[i]].selected = true;
                     }
-                    //unselect current item if already selected
+                    // Deselect if the user clicked an already-selected item.
                     if (unselect !== null) {
                         typesSelect.options[unselect].selected = false;
                     }
@@ -179,7 +247,8 @@ var angularObj = {
                         kml.prevSelectedTypes.push(kml.selectedTypes[i].index);
                     }
                 }
-                //if clicked already selected item save it's index to unselect
+                // Track the clicked item's index so it can be deselected in
+                // the deferred callback if it was already in prevSelectedTypes.
                 if (event.target.selected) {
                     unselect = event.target.index;
                     kml.prevSelectedTypes.splice(kml.prevSelectedTypes.indexOf(unselect), 1);
@@ -188,6 +257,12 @@ var angularObj = {
                 }
             };
         }]);
+        // ─────────────────────────────────────────────────────────────────────
+        // parsedDataController  (doc §6.1)
+        // ─────────────────────────────────────────────────────────────────────
+        // Manages the file-upload area and the parsed-zone result tables.
+        // Thin delegation layer: every method forwards directly to the
+        // corresponding kml.* function. Business logic lives in kml.js.
         angularObj.app.controller("parsedDataController", ["$scope", "clearService", function ($scope, clearService) {
             $scope.uploaderTitle = kml.isFormDataSupported ? "Drop your files here or click to select them" : "Click here to choose kml file";
             $scope.importSelectedZones = function () {
@@ -204,16 +279,48 @@ var angularObj = {
             };
             $scope.uploadFiles = function (event) {
                 var files = event.target.files;
+                // Clear any previous parse state before processing the new
+                // selection so stale rows cannot coexist with new ones.
                 clearService.clear();
                 kml.parseFiles(files);
             };
         }]);
     }
 };
+// ─────────────────────────────────────────────────────────────────────────────
+// kml.js — Core add-in logic  (doc §6.2)
+//
+// The kml object is the central state store and logic hub. It owns:
+//   • KML file parsing and geometry conversion (Polygon, LineString, Point)
+//   • The corridor-polygon algorithm (doc §7.3)
+//   • Zone table population and per-row import lifecycle
+//   • MyGeotab API batch-call orchestration
+//   • Options apply / reset
+//
+// All sub-components (Uploader, ColorPicker, VanillaSlider, Waiting, Utils)
+// are constructed in initVariables() and stored as kml.* properties so any
+// function in the object can reference them without circular dependencies.
+//
+// Exposed as a global (kml) in add-in context; also supports CommonJS and
+// AMD for unit-test environments.
+// ─────────────────────────────────────────────────────────────────────────────
 (function () {
     "use strict";
-    var DEG_PER_METER_LAT = 1 / (Math.PI / 180 * 6371000); // ~8.9932e-6 degrees per meter (constant at any latitude)
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Module-level constants
+    // ─────────────────────────────────────────────────────────────────────────
+    // Degrees of latitude per metre, derived from the WGS-84 mean Earth radius.
+    // Longitude is latitude-dependent and is scaled by cos(lat) at each use.
+    // Accurate to better than 0.1% for distances under 1 km at mid-latitudes
+    // (target deployment: Southeast Asia, ~±20°). See doc §10.3 for limits.
+    var DEG_PER_METER_LAT = 1 / (Math.PI / 180 * 6371000); // ~8.9932e-6 °/m
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // kml — central state store and logic hub
+    // ─────────────────────────────────────────────────────────────────────────
     var kml = {
+        // — Object state properties ——————————————————————————————————————————
         api: null,
         state: null,
         args: {},
@@ -221,7 +328,7 @@ var angularObj = {
         childCallback: {},
         minDate: new Date(Date.UTC(1986, 0, 1)),
         defaultZoneSize: 200,
-        defaultCorridorWidth: 15, // meters — buffer on each side of a LineString route
+        defaultCorridorWidth: 15, // half-width buffer in metres for LineString corridors (range: 10–50)
         localInit: ["addressLookup", "Address Lookup", "customer", "Customer", "office", "Office", "home", "Home"],
         isFormDataSupported: !!window.FormData,
         fileReader: null,
@@ -236,8 +343,21 @@ var angularObj = {
         vanillaSlider: null,
         waiting: null,
         importedInBG: [],
+        // Deliberate batch cap: MyGeotab's multiCall API becomes unstable
+        // above ~100 entities per call. 50 provides headroom for large KML files
+        // while keeping each call well within server timeout limits.
         itemsPerCall: 50,
         defaultZoneType: "ZoneTypeCustomerId",
+        // ─────────────────────────────────────────────────────────────────────
+        // Initialization  (doc §6.2 → initVariables)
+        // ─────────────────────────────────────────────────────────────────────
+        /**
+         * Wires all sub-components and sets initial option values.
+         * Called once from the MyGeotab add-in initialize() callback.
+         *
+         * @param {Object} api   - MyGeotab API object (api.call, api.multiCall).
+         * @param {Object} state - MyGeotab state object (state.getGroupFilter).
+         */
         initVariables: function (api, state) {
             this.api = api;
             this.state = state;
@@ -250,6 +370,8 @@ var angularObj = {
             this.uploader = new Uploader();
             this.vanillaSlider = new VanillaSlider();
             this.waiting = new Waiting();
+            // Collect "extern" DOM elements by id into this.args so controllers
+            // can reference them by name without repeated querySelectorAll calls.
             Array.prototype.forEach.call(this.args.container.parentNode.getElementsByClassName("extern"),
                 element => {
                     if (element.id) {
@@ -263,13 +385,23 @@ var angularObj = {
                 "zoneTypes": [this.defaultZoneType],
                 "zoneSize": this.defaultZoneSize,
                 "zoneColor": this.colorPickerObj.value(),
-                "zoneShape": false, //is not circle === square by default
+                "zoneShape": false, // square by default — circle is not the common case
                 "stoppedInsideZones": this.args.container.querySelector("#stoppedInsideZones").checked,
                 "corridorWidth": this.defaultCorridorWidth
             };
         },
         NOOP: function () {
         },
+        // ─────────────────────────────────────────────────────────────────────
+        // Zone type utilities
+        // ─────────────────────────────────────────────────────────────────────
+        /**
+         * Converts a flat key–value array into a lookup object.
+         * Throws if the array length is odd or if a key is duplicated.
+         *
+         * @param {Array<string>} data - Alternating [key, value, …] pairs.
+         * @returns {Object} Lookup map: { key: value }.
+         */
         setupLocal: function (data) {
             var i, fixed = {}, item;
             if (data.length % 2 !== 0) {
@@ -284,6 +416,16 @@ var angularObj = {
             }
             return fixed;
         },
+        /**
+         * Ensures the four built-in Geotab zone types (Customer, Office, Home,
+         * Address Lookup) are present in the zone-type list. If the API returns
+         * them as plain ID strings they are normalised to { id, name, isSystem }
+         * objects. If none were returned at all they are appended.
+         *
+         * @param {Array}   a                  - Zone type list from api.call Get ZoneType.
+         * @param {boolean} ignoreAddressLookup - Omit Address Lookup from the result.
+         * @returns {Array} Normalised zone type list with system types guaranteed.
+         */
         addSystemZoneTypes: function (a, ignoreAddressLookup) {
             var zoneTypes = {
                 "ZoneTypeAddressLookupId": this.local.addressLookup,
@@ -329,6 +471,16 @@ var angularObj = {
             }
             return a;
         },
+        // ─────────────────────────────────────────────────────────────────────
+        // Point zone shape factory  (doc §7.1 — Point geometry)
+        // ─────────────────────────────────────────────────────────────────────
+        /**
+         * Returns a { getZonePoints } factory used to expand a KML Point
+         * coordinate into a small area zone. Square is the default; circle uses
+         * a polygon approximation with enough sides for a smooth appearance.
+         *
+         * @returns {{ getZonePoints: function(lat, lng, diameter, isCircle): Array }}
+         */
         zoneShapeCreator: function () {
             var squareZoneCreator = function (lat, lng, size) {
                 var halfSide = (size / 2) || 0.0009,
@@ -376,6 +528,17 @@ var angularObj = {
                 }
             };
         },
+        // ─────────────────────────────────────────────────────────────────────
+        // File parsing  (doc §6.2 → parseFiles / parseKML)
+        // ─────────────────────────────────────────────────────────────────────
+        /**
+         * Reads each dropped or selected file sequentially using FileReader and
+         * delegates to isFileDataValid() + populateZoneTables() on completion.
+         * Sequential reads (not parallel) are used so the waiting spinner
+         * correctly represents overall progress.
+         *
+         * @param {FileList} files - Files from a drop event or file input.
+         */
         parseFiles: function (files) {
             var filesCount = files.length,
                 filesLoaded = 0;
@@ -410,6 +573,16 @@ var angularObj = {
             };
             this.fileReader.readAsText(files[0]);
         },
+        /**
+         * Validates that the parsed DOM is a KML document with at least one
+         * named Placemark of a supported geometry type. DOMParser silently
+         * returns a document with a <parsererror> element on XML parse failure;
+         * that case is caught by the tagName check below.
+         *
+         * @param {Document} kmlDoc  - Parsed XML document from DOMParser.
+         * @param {string}   fileName - Used in user-visible error messages.
+         * @returns {boolean} True if the document contains valid zone data.
+         */
         isFileDataValid: function (kmlDoc, fileName) {
             var placemark = kmlDoc.documentElement.querySelector("Placemark");
             if (kmlDoc.documentElement.tagName.toLowerCase() !== "kml" || !placemark) {
@@ -424,6 +597,15 @@ var angularObj = {
             }
             return true;
         },
+        // ─────────────────────────────────────────────────────────────────────
+        // Table population  (doc §6.2 → populateZoneTables)
+        // ─────────────────────────────────────────────────────────────────────
+        /**
+         * Iterates parsed zones and appends one table row per zone — polygons
+         * and corridors go to #polygonList, points to #pointList. Invalid zones
+         * (empty name, bad coordinates) are rendered with class "error" and a
+         * descriptive message; valid zones get a checked importCheckbox.
+         */
         populateZoneTables: function () {
             var hasValidZones = false,
                 isDataValid = function (data) {
@@ -507,6 +689,12 @@ var angularObj = {
                 this.args.container.querySelector("#selectAllLabel").style.display = "";
             }
         },
+        // ─────────────────────────────────────────────────────────────────────
+        // Geometry type detection  (doc §7.1)
+        // ─────────────────────────────────────────────────────────────────────
+        // Each predicate checks for the presence and structure of the relevant
+        // KML element rather than relying on a type attribute, because KML
+        // files from different sources do not use a consistent type field.
         isPoint: function (placemark) {
             var point = placemark.getElementsByTagName("Point");
             return point.length > 0 && point[0].getElementsByTagName("coordinates").length > 0;
@@ -525,6 +713,22 @@ var angularObj = {
             return lineString.length > 0 &&
                 lineString[0].getElementsByTagName("coordinates").length > 0;
         },
+        // ─────────────────────────────────────────────────────────────────────
+        // Corridor geometry helpers  (doc §7.3)
+        // ─────────────────────────────────────────────────────────────────────
+        // These four private methods implement the corridor-polygon algorithm.
+        // They are prefixed with _ to signal internal use; they are not called
+        // outside of lineStringToCorridorPolygon.
+
+        /**
+         * Returns the perpendicular distance from point to a line segment
+         * (lineStart → lineEnd) in metres. Used by _simplifyCoords.
+         *
+         * @param {{lon, lat}} point
+         * @param {{lon, lat}} lineStart
+         * @param {{lon, lat}} lineEnd
+         * @returns {number} Distance in metres.
+         */
         // Perpendicular distance from point to line segment (lineStart→lineEnd) in metres.
         _perpDistanceMeters: function (point, lineStart, lineEnd) {
             var lonScale = Math.cos(point.lat * Math.PI / 180);
@@ -598,6 +802,23 @@ var angularObj = {
                 dlat: my * bufferMeters * DEG_PER_METER_LAT * miterLen
             };
         },
+        // ─────────────────────────────────────────────────────────────────────
+        // Corridor polygon assembly  (doc §7.3)
+        // ─────────────────────────────────────────────────────────────────────
+        /**
+         * Converts a LineString coordinate array into a closed corridor polygon
+         * suitable for the MyGeotab Zone API. Algorithm steps:
+         *   1. Simplify with Ramer–Douglas–Peucker (5 m tolerance).
+         *   2. Compute perpendicular end-cap offsets at the first and last vertex.
+         *   3. Compute miter-join offsets at each interior vertex (capped at 4×
+         *      to prevent spikes at sharp turns < ~14°).
+         *   4. Concatenate left side (forward) + right side (reversed) and close
+         *      the ring by repeating the first point.
+         *
+         * @param {Array<{lon: number, lat: number}>} coords - At least 2 points.
+         * @param {number} bufferMeters - Half-width of corridor in metres.
+         * @returns {Array<{x: number, y: number}>} Closed polygon ring.
+         */
         // Converts an array of {lon, lat} LineString coordinates into a closed corridor polygon.
         // Returns [{x: lon, y: lat}] in the format expected by the MyGeotab Zone API.
         lineStringToCorridorPolygon: function (coords, bufferMeters) {
@@ -629,6 +850,23 @@ var angularObj = {
             polygon.push(polygon[0]); // close the ring
             return polygon;
         },
+        // ─────────────────────────────────────────────────────────────────────
+        // Zone metadata extraction  (doc §6.2 → getZoneParameters)
+        // ─────────────────────────────────────────────────────────────────────
+        /**
+         * Extracts all Zone API fields from a <Placemark> element. Style lookup
+         * follows the KML precedence: inline <Style> overrides a shared <Style>
+         * resolved via <styleUrl>. If no PolyStyle color is found, the zone
+         * color from the Options panel is used (colorFromOptions = true).
+         *
+         * KML encodes color in ABGR byte order (not standard RGBA). The bytes
+         * are reversed here before constructing the Geotab color object.
+         * Example: "7f0000ff" → alpha 0x7f (127), blue 0x00, green 0x00, red 0xff
+         * → { r: 255, g: 0, b: 0, a: 127 } (semi-transparent red).
+         *
+         * @param {Element} zone - A KML <Placemark> DOM element.
+         * @returns {Object} Zone parameters object for the MyGeotab Zone API.
+         */
         getZoneParameters: function (zone) {
             var desc = zone.getElementsByTagName("description"),
                 selfStyle = zone.getElementsByTagName("Style").length > 0 ? zone.getElementsByTagName("Style")[0] : null,
@@ -676,6 +914,22 @@ var angularObj = {
                 isLineString: this.isLineString(zone)
             };
         },
+        // ─────────────────────────────────────────────────────────────────────
+        // Geometry extraction  (doc §6.2 → getPoints / doc §7.1, §10.2)
+        // ─────────────────────────────────────────────────────────────────────
+        /**
+         * Routes geometry extraction to the appropriate handler based on the
+         * Placemark element's geometry type.
+         *
+         * Donut polygon (outer + inner boundary): the inner boundary is stitched
+         * to the outer ring by finding the minimum-distance outer–inner vertex
+         * pair using a Haversine distance function. This is O(n × m) where n
+         * and m are the outer and inner vertex counts. Acceptable for typical
+         * Google My Maps exports (< 500 vertices per ring). See doc §10.2.
+         *
+         * @param {Element} placemark - A KML <Placemark> DOM element.
+         * @returns {Array<{x: number, y: number}>} Point array for the Zone API.
+         */
         getPoints: function (placemark) {
             var coordinates = "",
                 points = [],
@@ -760,6 +1014,9 @@ var angularObj = {
             }
             return points;
         },
+        // ─────────────────────────────────────────────────────────────────────
+        // Row state management  (doc §9 — Import API errors)
+        // ─────────────────────────────────────────────────────────────────────
         markRowSuccess: function (rowId, zoneId) {
             var row = document.getElementById("row" + rowId),
                 link = document.createElement("a"),
@@ -801,6 +1058,18 @@ var angularObj = {
                 this.args.container.querySelector("#selectAllLabel").style.display = "none";
             }
         },
+        // ─────────────────────────────────────────────────────────────────────
+        // Import — batch API calls  (doc §6.2 → importZones / saveZones)
+        // ─────────────────────────────────────────────────────────────────────
+        /**
+         * Splits zonesToImport into sequential multiCall batches of at most
+         * itemsPerCall (50) zones, sending the next batch only after the
+         * previous one completes. Progress bar is updated proportionally.
+         * Each batch result marks individual rows as imported or error.
+         *
+         * @param {Array<Object>} zonesToImport - Zone parameter objects including
+         *   a rowId property for table row lookup.
+         */
         saveZones: function (zonesToImport) {
             var calls = [], callsParts = [], pushedCalls = 0, sentParts = 0,
                 doAfterCall = callLength => {
@@ -863,6 +1132,12 @@ var angularObj = {
             this.waiting.showProgressBar();
             sendQuery(callsParts[0]);
         },
+        /**
+         * Flushes the importedInBG queue built up while the add-in container
+         * was not in the DOM (e.g. the user navigated away during import).
+         * Called on window focus so the UI is updated the next time the user
+         * returns to the add-in.
+         */
         updateImportedInBG: function () {
             this.importedInBG.every(importedInBG => {
                 if (importedInBG.id !== undefined) {
@@ -951,6 +1226,9 @@ var angularObj = {
                 checkboxes[i].checked = (!!event.currentTarget.checked);
             }
         },
+        // ─────────────────────────────────────────────────────────────────────
+        // State reset  (doc §6.2 → clear)
+        // ─────────────────────────────────────────────────────────────────────
         clearDataTables: function () {
             var removeRows = tableId => {
                 var table = this.args.container.querySelector("#" + tableId + " table"),
@@ -975,6 +1253,15 @@ var angularObj = {
             this.args.container.querySelector("#selectAllLabel").style.display = "none";
             this.utils.hideError();
         },
+        // ─────────────────────────────────────────────────────────────────────
+        // Options management  (doc §8)
+        // ─────────────────────────────────────────────────────────────────────
+        /**
+         * Reads all current values from the Options modal inputs and writes
+         * them to kml.options. Also re-derives zoneParameters for every already-
+         * parsed zone so color and type changes are reflected immediately in the
+         * table without requiring a re-upload.
+         */
         applyOptions: function () {
             var selectedTypes = this.args.container.querySelector("#typesSelect").selectedOptions ||
                 this.utils.getSelectValues(this.args.container.querySelector("#typesSelect")),
@@ -1027,6 +1314,11 @@ var angularObj = {
         }
     };
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // UMD export — CommonJS / AMD / browser global
+    // ─────────────────────────────────────────────────────────────────────────
+    // In the MyGeotab add-in (browser) the object is attached to window as
+    // kml. CommonJS and AMD paths support unit testing outside the browser.
     let globals = (function () { return this || (0, eval)("this"); }());
 
     if (typeof module !== "undefined" && module.exports) {
@@ -1037,6 +1329,20 @@ var angularObj = {
         globals.kml = kml;
     }
 }());
+
+// ─────────────────────────────────────────────────────────────────────────────
+// vanillaSlider.js — Transparency slider widget  (doc §6.5)
+//
+// Provides a slider() factory that returns either a native input[type=range]
+// (modern browsers) or a custom drag-based slider (older browsers that do not
+// support range inputs). The custom implementation uses touch or mouse events
+// depending on the device.
+//
+// The vanilla IIFE object bundles lightweight DOM utilities (addClass, closest,
+// offset, extend, etc.) used internally by the slider. Each slider instance
+// registers its own event listeners — not event-delegated — which is acceptable
+// given only one slider is ever created per add-in session.
+// ─────────────────────────────────────────────────────────────────────────────
 (function () {
     "use strict";
     var VanillaSlider = function () {
@@ -1050,6 +1356,9 @@ var angularObj = {
             };
 
         return {
+            // ─────────────────────────────────────────────────────────────────
+            // vanilla — lightweight DOM utility object (IIFE, evaluated once)
+            // ─────────────────────────────────────────────────────────────────
             vanilla: (function () {
                 var classNameCtrl = function (el) {
                     var obj = typeof el.className === "string" ? el : el.className,
@@ -1236,10 +1545,14 @@ var angularObj = {
                             }
                         },
                         /**
-                         * get the first element that matches the selector by testing the element itself and traversing up through its ancestors in the DOM tree.
-                         * @param elem {HTMLElement} DOM Element
-                         * @param selector {String}
-                         * */
+                         * Polyfill for Element.closest() — IE 11 and early Edge do not
+                         * implement closest() natively. Falls back to the vendor-prefixed
+                         * matches() variants before traversing the parent chain manually.
+                         *
+                         * @param elem {HTMLElement} Starting element.
+                         * @param selector {String} CSS selector to match.
+                         * @returns {HTMLElement|false} Nearest matching ancestor, or false.
+                         */
                         closest: function (elem, selector) {
                             var matchesSelector = elem && (elem.matches || elem.webkitMatchesSelector ||
                                 elem.mozMatchesSelector || elem.msMatchesSelector);
@@ -1278,6 +1591,20 @@ var angularObj = {
                     };
                 return vanilla;
             })(),
+            // ─────────────────────────────────────────────────────────────────
+            // slider factory — returns a { getValue, setValue } interface
+            // ─────────────────────────────────────────────────────────────────
+            /**
+             * Creates a slider widget inside elem. Automatically selects:
+             *   • Native  input[type=range] when the browser supports it.
+             *   • Custom  drag-based SPAN widget otherwise (IE 11 / old Edge).
+             *
+             * Touch or mouse handlers are chosen based on isBrowserSupportTouchEvents().
+             *
+             * @param {HTMLElement} elem          - Container element.
+             * @param {Object}      customOptions - { min, max, step, value, onChange }.
+             * @returns {{ getValue: function, setValue: function }|null}
+             */
             slider: function (elem, customOptions) {
                 var defaultOptions = {
                     max: 100,
@@ -1488,6 +1815,9 @@ var angularObj = {
         };
     };
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // UMD export — CommonJS / AMD / browser global
+    // ─────────────────────────────────────────────────────────────────────────
     let globals = (function () { return this || (0, eval)("this"); }());
 
     if (typeof module !== "undefined" && module.exports) {
@@ -1498,12 +1828,33 @@ var angularObj = {
         globals.VanillaSlider = VanillaSlider;
     }
 }());
+
+// ─────────────────────────────────────────────────────────────────────────────
+// utils.js — Shared utility functions  (doc §6.6)
+//
+// Instantiated as kml.utils in initVariables(). Provides color conversion,
+// input-type feature detection, error message display, and HTML entity
+// decoding used by kml.getZoneParameters() for zone name/description fields.
+// ─────────────────────────────────────────────────────────────────────────────
 (function () {
     "use strict";
     var Utils = function () {
+        // Cached at construction time — assumes #errorMessage is in the DOM
+        // before new Utils() is called (guaranteed by kml.initVariables order).
         let errorMessageElement = kml.args.container.querySelector("#errorMessage");
 
         return {
+            /**
+             * Tests whether the browser natively supports a given input type.
+             * Browsers that do not recognise the type silently fall back to
+             * type="text", so a value that would be sanitised by the typed
+             * input (e.g. "hello world" for type="color") is used as the probe.
+             *
+             * @param {string} type      - Input type to test (e.g. "color", "range").
+             * @param {string} testValue - Value that a text input would preserve
+             *                            but the typed input would sanitise.
+             * @returns {boolean} True if the browser supports the typed input.
+             */
             inputTypeSupport: function (type, testValue) {
                 var testEl = document.createElement("input");
 
@@ -1511,6 +1862,13 @@ var angularObj = {
                 testEl.setAttribute("value", testValue);
                 return testEl.type === type && testEl.value !== testValue;
             },
+
+            /**
+             * Returns true if the browser supports touch events.
+             * Used by vanillaSlider.js to choose touch vs mouse handlers.
+             *
+             * @returns {boolean}
+             */
             isBrowserSupportTouchEvents: function () {
                 var result = true;
                 try {
@@ -1520,12 +1878,30 @@ var angularObj = {
                 }
                 return result;
             },
+
+            /**
+             * Normalises a color value to an [R, G, B, A] array.
+             * Accepts either an {r, g, b, a} object or an array passthrough.
+             *
+             * @param {{r,g,b,a}|Array} color
+             * @returns {Array<number>} [R, G, B, A] in 0–255 range.
+             */
             colorObjToArr: function (color) {
                 if (!Array.isArray(color)) {
                     return [color.r, color.g, color.b, color.a];
                 }
                 return color;
             },
+
+            /**
+             * Converts RGB component values to a CSS hex color string (#RRGGBB).
+             * Accepts either separate R, G, B arguments or a single {r,g,b} object.
+             *
+             * @param {number|Object} rgbaOrR - Red channel (0–255) or {r,g,b} object.
+             * @param {number}        [G]     - Green channel (0–255).
+             * @param {number}        [B]     - Blue channel (0–255).
+             * @returns {string} CSS hex string e.g. "#ff0000".
+             */
             rgbToHex: function (rgbaOrR, G, B) {
                 if (typeof rgbaOrR === "object") {
                     return kml.rgbToHex.apply(this, [rgbaOrR.r, rgbaOrR.g, rgbaOrR.b]);
@@ -1535,6 +1911,15 @@ var angularObj = {
                     return hex.length < 2 ? "0" + hex : hex;
                 }).join("");
             },
+
+            /**
+             * Converts a hex color string to an [R, G, B] array (0–255 each).
+             * Leading "#" and shorthand 3-character hex are both handled via
+             * normalizeHexColor().
+             *
+             * @param {string} hexColor - e.g. "#ff0000" or "f00".
+             * @returns {Array<number>} [R, G, B].
+             */
             hexToRGBArray: function (hexColor) {
                 var normalizedColor = this.normalizeHexColor(hexColor),
                     hexToDec = offset => parseInt(normalizedColor.slice(offset, offset + 2), 16);
@@ -1544,7 +1929,13 @@ var angularObj = {
                     hexToDec(4)
                 ];
             },
+
+            /** Strips "#" and expands 3-character shorthand to 6 characters. */
             normalizeHexColor: hexColor => hexColor.replace("#", "").replace(/^(.)(.)(.)$/, "$1$1$2$2$3$3"),
+
+            // ─────────────────────────────────────────────────────────────────
+            // Error message display
+            // ─────────────────────────────────────────────────────────────────
             showError: function (message) {
                 errorMessageElement.textContent = message;
                 errorMessageElement.style.display = "";
@@ -1554,6 +1945,15 @@ var angularObj = {
                     errorMessageElement.style.display = "none";
                 }
             },
+
+            /**
+             * Cross-browser polyfill for HTMLSelectElement.selectedOptions.
+             * IE 11 and early Edge do not implement selectedOptions on
+             * multi-select elements; this returns an equivalent array.
+             *
+             * @param {HTMLSelectElement} select
+             * @returns {Array<{value: string}>}
+             */
             getSelectValues: function (select) {
                 var result = [],
                     options = select && select.options,
@@ -1568,6 +1968,18 @@ var angularObj = {
                 }
                 return result;
             },
+
+            /**
+             * Decodes HTML entities in KML name and description fields.
+             *
+             * Safety: assigning to innerHTML parses the string into DOM nodes,
+             * but reading textContent returns only the text representation —
+             * script tags are never executed and no XSS vector exists here
+             * because the string never re-enters the DOM as markup.
+             *
+             * @param {string} str - Raw text possibly containing HTML entities.
+             * @returns {string} Decoded plain text.
+             */
             decodeHTMLEntities: function (str) {
                 var a = document.createElement("a");
                 if (str && typeof str === "string") {
@@ -1579,6 +1991,9 @@ var angularObj = {
         };
     };
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // UMD export — CommonJS / AMD / browser global
+    // ─────────────────────────────────────────────────────────────────────────
     let globals = (function () { return this || (0, eval)("this"); }());
 
     if (typeof module !== "undefined" && module.exports) {
@@ -1589,17 +2004,43 @@ var angularObj = {
         globals.Utils = Utils;
     }
 }());
+
+// ─────────────────────────────────────────────────────────────────────────────
+// colorPicker.js — Color picker abstraction  (doc §6.3)
+//
+// Wraps two color-input backends selected at runtime:
+//   • Native  input[type=color] — modern browsers (Chrome, Firefox, Edge)
+//   • jscolor — fallback for browsers without native color picker support
+//
+// Exposes a unified value() getter/setter and a transparency slider backed
+// by vanillaSlider.js. Quick-color swatches are injected programmatically.
+// ─────────────────────────────────────────────────────────────────────────────
 (function () {
     "use strict";
     let ColorPicker = () => {
+        // ─────────────────────────────────────────────────────────────────────
+        // Module-level defaults  (doc §6.3)
+        // ─────────────────────────────────────────────────────────────────────
+        // defaultColor: [R, G, B, A] in 0–255 range.
+        // Alpha 64 / 255 ≈ 25% opacity → 75% transparency (defaultTransparencyValue).
+        // The transparency slider uses the inverted percentage: 0 = fully opaque,
+        // 100 = fully transparent.
         let quickColorsBox = null,
             transparencyControl = null,
             colorToInitWith = null,
-            defaultColor = [0, 128, 0, 64],
+            defaultColor = [0, 128, 0, 64],       // green, 75% transparent
             defaultColorHex = "#008000",
             arrDefaultColorRGBA = { r: 0, g: 128, b: 0, a: 64 },
-            defaultTransparencyValue = 75,
+            defaultTransparencyValue = 75,         // percentage (0=opaque, 100=transparent)
             picker = null,
+
+        // ─────────────────────────────────────────────────────────────────────
+        // DOM wiring
+        // ─────────────────────────────────────────────────────────────────────
+        // setVariables() is called once inside formColorPicker() after the
+        // Angular container is ready. It caches DOM references and constructs
+        // the transparency control, choosing slider vs button-set based on
+        // which element is present in the DOM.
             setVariables = () => {
                 quickColorsBox = kml.args.container.querySelector("#colorPicker").querySelectorAll(".quickColorsBox");
                 colorToInitWith = kml.utils.colorObjToArr(arrDefaultColorRGBA || defaultColor);
@@ -1618,7 +2059,10 @@ var angularObj = {
                                 });
 
                             return {
+                                // Returns alpha as 0–255 converted from the 0–100 slider percentage.
                                 get: () => sliderUI ? Math.round((100 - sliderUI.getValue()) / 100 * 255) : 0,
+                                // Accepts both {r,g,b,a} objects (a in 0–255) and [r,g,b,a] arrays
+                                // so callers can pass either format without conversion.
                                 set: function (val) {
                                     sliderUI.setValue((val.a ? val.a : val[3]) || 0);
                                 }
@@ -1642,8 +2086,20 @@ var angularObj = {
             getDefaultTransparencyValue: () => defaultTransparencyValue,
             getPicker: () => picker,
             setVariables,
+            // ─────────────────────────────────────────────────────────────────
+            // Public API
+            // ─────────────────────────────────────────────────────────────────
+            /**
+             * Initialises the color picker widget and injects quick-color swatches.
+             * Called once from kml.initVariables(). Returns a { value, attachEvent }
+             * interface used throughout kml.js and optionsController.
+             *
+             * @returns {{ value: function, attachEvent: function }}
+             */
             formColorPicker: () => {
                 setVariables();
+                // Quick-color palette: orange-red, orange, green, yellow,
+                // light-blue, blue, purple — matching the UI colour swatches.
                 let quickColors = ["#ff4500", "#ffa500", "#008000", "#ffff00", "#ADD8E6", "#0000ff", "#800080"],
                     listeners = [],
                     getColorElement = () => kml.args.container.querySelector("#colorPicker INPUT:not([type='radio'])"),
@@ -1665,6 +2121,9 @@ var angularObj = {
                             }
                         });
                     },
+                    // Selects the native or jscolor backend at runtime via feature
+                    // detection. Both return the same { setValue, getValue, getHexValue }
+                    // interface so the rest of the module is backend-agnostic.
                     createColorPicker = () => {
                         let isSupportColor = kml.utils.inputTypeSupport("color", "hello world"),
                             nativeColorPicker = () => {
@@ -1758,6 +2217,18 @@ var angularObj = {
                     attachEvent: attachEvent
                 };
             },
+            /**
+             * Sets the picker to the clicked quick-color swatch while preserving
+             * the current transparency value.
+             *
+             * The rgb() regex branch assumes the browser serialises backgroundColor
+             * as "rgb(R, G, B)" — this is true in all supported browsers. If a
+             * future browser uses a different format, exec() will return null and
+             * splice() will throw. Hex values skip the regex path entirely.
+             *
+             * @param {Event} e - The ng-click event from the swatch element.
+             * @returns {string} The hex value of the selected color.
+             */
             setQuickColor: function (e) {
                 if (!e.target.style.backgroundColor) {//clicked on container
                     return;
@@ -1784,6 +2255,9 @@ var angularObj = {
         };
     };
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // UMD export — CommonJS / AMD / browser global
+    // ─────────────────────────────────────────────────────────────────────────
     let globals = (function () { return this || (0, eval)("this"); }());
 
     if (typeof module !== "undefined" && module.exports) {
@@ -1794,6 +2268,14 @@ var angularObj = {
         globals.ColorPicker = ColorPicker;
     }
 }());
+
+// ─────────────────────────────────────────────────────────────────────────────
+// uploader.js — Drag-and-drop file upload area  (doc §6.4)
+//
+// Initialises the .dragAndDropUploader container with drag-and-drop and
+// click-to-browse behaviour. File-type and size validation are delegated to
+// kml.parseFiles() — no validation is performed here.
+// ─────────────────────────────────────────────────────────────────────────────
 (function () {
     "use strict";
     var Uploader = function () {
@@ -1801,11 +2283,18 @@ var angularObj = {
             defaultClass = null;
 
         return {
+            /**
+             * Registers drag-and-drop and click-to-select event handlers on the
+             * upload area. Called once from kml.initVariables().
+             */
             init: function () {
                 dragAndDropArea = kml.args.container.getElementsByClassName("dragAndDropUploader")[0];
                 defaultClass = dragAndDropArea.className;
                 var inputFile = dragAndDropArea.getElementsByTagName("input")[0];
 
+                // Intentional clear on drag-enter: any previous parse result is
+                // discarded before the user drops a new file. This prevents stale
+                // rows from a prior upload coexisting with the new parse output.
                 dragAndDropArea.ondragover = function () {
                     angular.injector(["ng", "importKMLZones"]).get("clearService").clear();
                     dragAndDropArea.className = defaultClass + " hoverArea";
@@ -1822,6 +2311,10 @@ var angularObj = {
                     var files = event.dataTransfer.files;
                     kml.parseFiles(files);
                 };
+                // Programmatic click on the hidden file input (width: 0; height: 0;
+                // overflow: hidden in CSS). Sizing the input to 0×0 prevents the
+                // browser from firing a second file-picker dialog when the click
+                // event propagates from the container down to the input element.
                 dragAndDropArea.onclick = function () {
                     inputFile.click();
                 };
@@ -1832,6 +2325,9 @@ var angularObj = {
         };
     };
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // UMD export — CommonJS / AMD / browser global
+    // ─────────────────────────────────────────────────────────────────────────
     let globals = (function () { return this || (0, eval)("this"); }());
 
     if (typeof module !== "undefined" && module.exports) {
@@ -1842,10 +2338,22 @@ var angularObj = {
         globals.Uploader = Uploader;
     }
 }());
+
+// ─────────────────────────────────────────────────────────────────────────────
+// waiting.js — Import progress overlay  (doc §6.7)
+//
+// Controls the #waiting full-screen overlay (shown during file parsing) and
+// the #importProgress bar (shown during API batch calls). Uses spin.js to
+// render a centred spinner. Exposed as kml.waiting and called from
+// kml.saveZones() during each multiCall batch.
+// ─────────────────────────────────────────────────────────────────────────────
 (function () {
     "use strict";
     var Waiting = function () {
         var waitingElement = kml.args.container.querySelector("#waiting"),
+            // ─────────────────────────────────────────────────────────────────
+            // spin.js configuration — visual appearance of the overlay spinner
+            // ─────────────────────────────────────────────────────────────────
             opts = {
                 lines: 13 // The number of lines to draw
                 , length: 24 // The length of each line
@@ -1873,6 +2381,9 @@ var angularObj = {
             progressBarContainer = kml.args.container.querySelector("#progressContainer"),
             progressBar = kml.args.container.querySelector("#importProgress");
         return {
+            // ─────────────────────────────────────────────────────────────────
+            // Overlay spinner — shown during file parsing
+            // ─────────────────────────────────────────────────────────────────
             show: function () {
                 waitingElement.style.display = "";
                 spinner.spin(target);
@@ -1881,12 +2392,19 @@ var angularObj = {
                 waitingElement.style.display = "none";
                 spinner.stop();
             },
+
+            // ─────────────────────────────────────────────────────────────────
+            // Progress bar — shown during API import batch calls
+            // ─────────────────────────────────────────────────────────────────
             showProgressBar: function () {
                 progressBarContainer.style.display = "";
                 kml.args.container.style.overflow = "hidden";
                 kml.args.container.style.height = "100%";
                 progressBar.value = "0";
             },
+            // The 400 ms delay intentionally keeps the bar visible at 100% for
+            // a moment after the last batch completes, giving the user visual
+            // confirmation that the import finished before the bar disappears.
             hideProgressBar: function () {
                 setTimeout(function () {
                     if (progressBarContainer) {
@@ -1896,6 +2414,9 @@ var angularObj = {
                     }
                 }, 400);
             },
+            // Caller is responsible for ensuring cumulative values do not exceed
+            // 100 — the <progress> element clamps visually but does not throw.
+            // saveZones() computes each increment as (batchSize / totalZones) * 100.
             updateProgressBar: function (value) {
                 if (progressBar) {
                     progressBar.value += value;
@@ -1904,6 +2425,9 @@ var angularObj = {
         };
     };
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // UMD export — CommonJS / AMD / browser global
+    // ─────────────────────────────────────────────────────────────────────────
     let globals = (function () { return this || (0, eval)("this"); }());
 
     if (typeof module !== "undefined" && module.exports) {

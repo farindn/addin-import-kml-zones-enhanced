@@ -1,14 +1,39 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// colorPicker.js — Color picker abstraction  (doc §6.3)
+//
+// Wraps two color-input backends selected at runtime:
+//   • Native  input[type=color] — modern browsers (Chrome, Firefox, Edge)
+//   • jscolor — fallback for browsers without native color picker support
+//
+// Exposes a unified value() getter/setter and a transparency slider backed
+// by vanillaSlider.js. Quick-color swatches are injected programmatically.
+// ─────────────────────────────────────────────────────────────────────────────
 (function () {
     "use strict";
     let ColorPicker = () => {
+        // ─────────────────────────────────────────────────────────────────────
+        // Module-level defaults  (doc §6.3)
+        // ─────────────────────────────────────────────────────────────────────
+        // defaultColor: [R, G, B, A] in 0–255 range.
+        // Alpha 64 / 255 ≈ 25% opacity → 75% transparency (defaultTransparencyValue).
+        // The transparency slider uses the inverted percentage: 0 = fully opaque,
+        // 100 = fully transparent.
         let quickColorsBox = null,
             transparencyControl = null,
             colorToInitWith = null,
-            defaultColor = [0, 128, 0, 64],
+            defaultColor = [0, 128, 0, 64],       // green, 75% transparent
             defaultColorHex = "#008000",
             arrDefaultColorRGBA = { r: 0, g: 128, b: 0, a: 64 },
-            defaultTransparencyValue = 75,
+            defaultTransparencyValue = 75,         // percentage (0=opaque, 100=transparent)
             picker = null,
+
+        // ─────────────────────────────────────────────────────────────────────
+        // DOM wiring
+        // ─────────────────────────────────────────────────────────────────────
+        // setVariables() is called once inside formColorPicker() after the
+        // Angular container is ready. It caches DOM references and constructs
+        // the transparency control, choosing slider vs button-set based on
+        // which element is present in the DOM.
             setVariables = () => {
                 quickColorsBox = kml.args.container.querySelector("#colorPicker").querySelectorAll(".quickColorsBox");
                 colorToInitWith = kml.utils.colorObjToArr(arrDefaultColorRGBA || defaultColor);
@@ -27,7 +52,10 @@
                                 });
 
                             return {
+                                // Returns alpha as 0–255 converted from the 0–100 slider percentage.
                                 get: () => sliderUI ? Math.round((100 - sliderUI.getValue()) / 100 * 255) : 0,
+                                // Accepts both {r,g,b,a} objects (a in 0–255) and [r,g,b,a] arrays
+                                // so callers can pass either format without conversion.
                                 set: function (val) {
                                     sliderUI.setValue((val.a ? val.a : val[3]) || 0);
                                 }
@@ -51,8 +79,20 @@
             getDefaultTransparencyValue: () => defaultTransparencyValue,
             getPicker: () => picker,
             setVariables,
+        // ─────────────────────────────────────────────────────────────────────
+        // Public API
+        // ─────────────────────────────────────────────────────────────────────
+        /**
+         * Initialises the color picker widget and injects quick-color swatches.
+         * Called once from kml.initVariables(). Returns a { value, attachEvent }
+         * interface used throughout kml.js and optionsController.
+         *
+         * @returns {{ value: function, attachEvent: function }}
+         */
             formColorPicker: () => {
                 setVariables();
+                // Quick-color palette: orange-red, orange, green, yellow,
+                // light-blue, blue, purple — matching the UI colour swatches.
                 let quickColors = ["#ff4500", "#ffa500", "#008000", "#ffff00", "#ADD8E6", "#0000ff", "#800080"],
                     listeners = [],
                     getColorElement = () => kml.args.container.querySelector("#colorPicker INPUT:not([type='radio'])"),
@@ -74,6 +114,9 @@
                             }
                         });
                     },
+                    // Selects the native or jscolor backend at runtime via feature
+                    // detection. Both return the same { setValue, getValue, getHexValue }
+                    // interface so the rest of the module is backend-agnostic.
                     createColorPicker = () => {
                         let isSupportColor = kml.utils.inputTypeSupport("color", "hello world"),
                             nativeColorPicker = () => {
@@ -167,6 +210,18 @@
                     attachEvent: attachEvent
                 };
             },
+            /**
+             * Sets the picker to the clicked quick-color swatch while preserving
+             * the current transparency value.
+             *
+             * The rgb() regex branch assumes the browser serialises backgroundColor
+             * as "rgb(R, G, B)" — this is true in all supported browsers. If a
+             * future browser uses a different format, exec() will return null and
+             * splice() will throw. Hex values skip the regex path entirely.
+             *
+             * @param {Event} e - The ng-click event from the swatch element.
+             * @returns {string} The hex value of the selected color.
+             */
             setQuickColor: function (e) {
                 if (!e.target.style.backgroundColor) {//clicked on container
                     return;
@@ -193,6 +248,9 @@
         };
     };
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // UMD export — CommonJS / AMD / browser global
+    // ─────────────────────────────────────────────────────────────────────────
     let globals = (function () { return this || (0, eval)("this"); }());
 
     if (typeof module !== "undefined" && module.exports) {

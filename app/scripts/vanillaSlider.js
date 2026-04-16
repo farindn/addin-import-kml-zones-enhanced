@@ -1,3 +1,16 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// vanillaSlider.js — Transparency slider widget  (doc §6.5)
+//
+// Provides a slider() factory that returns either a native input[type=range]
+// (modern browsers) or a custom drag-based slider (older browsers that do not
+// support range inputs). The custom implementation uses touch or mouse events
+// depending on the device.
+//
+// The vanilla IIFE object bundles lightweight DOM utilities (addClass, closest,
+// offset, extend, etc.) used internally by the slider. Each slider instance
+// registers its own event listeners — not event-delegated — which is acceptable
+// given only one slider is ever created per add-in session.
+// ─────────────────────────────────────────────────────────────────────────────
 (function () {
     "use strict";
     var VanillaSlider = function () {
@@ -11,6 +24,9 @@
             };
 
         return {
+            // ─────────────────────────────────────────────────────────────────
+            // vanilla — lightweight DOM utility object (IIFE, evaluated once)
+            // ─────────────────────────────────────────────────────────────────
             vanilla: (function () {
                 var classNameCtrl = function (el) {
                     var obj = typeof el.className === "string" ? el : el.className,
@@ -197,10 +213,14 @@
                             }
                         },
                         /**
-                         * get the first element that matches the selector by testing the element itself and traversing up through its ancestors in the DOM tree.
-                         * @param elem {HTMLElement} DOM Element
-                         * @param selector {String}
-                         * */
+                         * Polyfill for Element.closest() — IE 11 and early Edge do not
+                         * implement closest() natively. Falls back to the vendor-prefixed
+                         * matches() variants before traversing the parent chain manually.
+                         *
+                         * @param elem {HTMLElement} Starting element.
+                         * @param selector {String} CSS selector to match.
+                         * @returns {HTMLElement|false} Nearest matching ancestor, or false.
+                         */
                         closest: function (elem, selector) {
                             var matchesSelector = elem && (elem.matches || elem.webkitMatchesSelector ||
                                 elem.mozMatchesSelector || elem.msMatchesSelector);
@@ -239,6 +259,20 @@
                     };
                 return vanilla;
             })(),
+            // ─────────────────────────────────────────────────────────────────
+            // slider factory — returns a { getValue, setValue } interface
+            // ─────────────────────────────────────────────────────────────────
+            /**
+             * Creates a slider widget inside elem. Automatically selects:
+             *   • Native  input[type=range] when the browser supports it.
+             *   • Custom  drag-based SPAN widget otherwise (IE 11 / old Edge).
+             *
+             * Touch or mouse handlers are chosen based on isBrowserSupportTouchEvents().
+             *
+             * @param {HTMLElement} elem          - Container element.
+             * @param {Object}      customOptions - { min, max, step, value, onChange }.
+             * @returns {{ getValue: function, setValue: function }|null}
+             */
             slider: function (elem, customOptions) {
                 var defaultOptions = {
                     max: 100,
@@ -449,6 +483,9 @@
         };
     };
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // UMD export — CommonJS / AMD / browser global
+    // ─────────────────────────────────────────────────────────────────────────
     let globals = (function () { return this || (0, eval)("this"); }());
 
     if (typeof module !== "undefined" && module.exports) {

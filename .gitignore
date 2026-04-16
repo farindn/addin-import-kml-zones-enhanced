@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+bower_components/
+
+# Build tool caches
+.tmp/
+.grunt/
+.sass-cache/
+
+# Claude Code session data
+.claude/
+
+# Test artifacts and reference media
+*.kml
+*.jpg
+*.jpeg
+*.png
+*.mp4
+*.mov
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+*.swp
+*~
