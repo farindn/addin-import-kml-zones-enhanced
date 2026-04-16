@@ -46,6 +46,12 @@ body, input, select, textarea, button {
   color: var(--color-text);
 }
 
+/* Fix #1: Padding around main container */
+#importKmlZones {
+  padding: 20px 24px;
+  box-sizing: border-box;
+}
+
 /* ── Disclaimer Banner ──────────────────────────────────────── */
 .kml-disclaimer {
   display: flex;
@@ -60,11 +66,14 @@ body, input, select, textarea, button {
   color: var(--color-text-secondary);
   line-height: 1.5;
 }
+/* Fix #2: Icon classes now style inline SVG elements (not font ligatures) */
 .kml-disclaimer-icon {
   flex-shrink: 0;
   color: var(--color-primary);
-  font-size: 18px;
+  width: 18px;
+  height: 18px;
   margin-top: 1px;
+  display: block;
 }
 .kml-disclaimer strong {
   color: var(--color-text);
@@ -170,10 +179,11 @@ body, input, select, textarea, button {
   background: rgba(0, 120, 211, 0.04);
 }
 
-/* Upload icon */
+/* Upload icon (inline SVG) */
 .kml-upload-icon {
-  font-size: 36px;
   color: var(--color-secondary);
+  width: 36px;
+  height: 36px;
   margin-bottom: var(--sp-1);
   display: block;
 }
@@ -200,17 +210,22 @@ body, input, select, textarea, button {
 }
 
 /*
-  The hidden file input must cover the entire upload box so the whole area
-  is clickable. uploader.js also calls inputFile.click() on the drop zone's
-  onclick — so this input must be the first <input> child of .dragAndDropUploader.
+  Fix #0: The file input must NOT cover the upload box.
+  uploader.js sets dragAndDropArea.onclick = () => inputFile.click()
+  If the input covers the whole box, clicks fire BOTH the input's native dialog
+  AND the div onclick → inputFile.click(), opening two file pickers.
+  Solution: keep input zero-size/invisible; uploader.js handles the click.
+  The input must remain the first <input> child of .dragAndDropUploader so
+  uploader.js can find it via getElementsByTagName("input")[0].
 */
 .uploadFileElement {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  overflow: hidden;
   opacity: 0;
-  cursor: pointer;
 }
 
 /* ── Error Banner ───────────────────────────────────────────── */
@@ -251,28 +266,24 @@ body, input, select, textarea, button {
   border-bottom: 2px solid var(--color-border);
   white-space: nowrap;
 }
-/* Section header (colspan full-width th) */
+/* Fix #3: Section header — visually distinct, above the column headers */
 .checkmateListTable thead th[colspan] {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
   letter-spacing: 0;
   text-transform: none;
   color: var(--color-text);
   background: var(--color-bg);
-  border-bottom: 1px solid var(--color-border);
-  padding: var(--sp-4) var(--sp-4) var(--sp-2);
+  border-bottom: none;
+  border-top: none;
+  padding: 24px 0 8px;
 }
-/* Column header row (first tbody tr used as column headers in existing markup) */
-.checkmateListTable tbody tr:first-child td {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--color-text-secondary);
-  background: var(--color-surface);
-  border-bottom: 2px solid var(--color-border);
-  padding: 10px var(--sp-4);
-}
+/*
+  Fix #4: REMOVED the old tbody tr:first-child td gray rule.
+  That rule was written for old HTML where column headers sat in tbody row 1.
+  Column headers are now in <thead> row 2, so this rule would gray the FIRST DATA ROW.
+  kml.js appends data rows directly to <tbody> which starts empty.
+*/
 .checkmateListTable tbody td {
   padding: 10px var(--sp-4);
   border-bottom: 1px solid var(--color-border);
@@ -304,13 +315,26 @@ body, input, select, textarea, button {
   cursor: pointer;
   accent-color: var(--color-primary);
   display: block;
-  margin-left: auto;
+  margin: 0 auto; /* Fix #5: center, not right-aligned */
+}
+/* Center SELECT column header and cells */
+.checkmateListTable thead th:last-child {
+  text-align: center;
+}
+.checkmateListTable tbody td:last-child {
+  text-align: center;
 }
 
 /* ── Table section label above polygon/point lists ────────── */
+/* Fix #9: tables scroll horizontally on narrow screens, not the whole page */
 #polygonList,
 #pointList {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+#polygonList table,
+#pointList table {
+  min-width: 480px; /* prevent columns from collapsing on narrow viewports */
 }
 
 /* ── Switch buttons (Yes/No toggle, geotabSwitchButton) ─────── */
@@ -381,6 +405,7 @@ body, input, select, textarea, button {
   width: min(520px, 94vw);
   max-height: 88vh;
   overflow-y: auto;
+  overflow-x: hidden; /* Fix #7: no horizontal scroll */
   background: var(--color-bg);
   border-radius: 12px;
   padding: var(--sp-6);
@@ -413,11 +438,22 @@ body, input, select, textarea, button {
 }
 .ng-modal-dialog-content {
   text-align: left;
+  max-width: 100%;
+  overflow: hidden;
 }
 .ng-modal-dialog-content ul {
   list-style: none;
   padding: 0;
   margin: 0;
+}
+/* Prevent any form element inside modal from overflowing */
+.ng-modal-dialog select,
+.ng-modal-dialog input[type="number"],
+.ng-modal-dialog .colorPickerField,
+.ng-modal-dialog .formColorPicker,
+.ng-modal-dialog .geotabOptionsMenuElementValue {
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* ── Options Menu Items ─────────────────────────────────────── */
@@ -458,6 +494,15 @@ body, input, select, textarea, button {
   padding-top: 6px;
   float: none;
   display: block;
+}
+/* Fix #8: Yes/No toggle labels must NOT inherit the 160px width from above.
+   .geotabOptionsMenuElement label has higher effective specificity in doc order,
+   so we need a more specific rule to reset it for buttons inside the toggle. */
+.geotabOptionsMenuElement .horizontalButtonSet label {
+  width: auto;
+  display: inline-flex;
+  padding-top: 0;
+  flex: none;
 }
 .geotabOptionsMenuElementValue {
   flex: 1;
@@ -704,6 +749,12 @@ input[type="color"]::-webkit-color-swatch { border: none; }
 
 /* ── Responsive: Mobile bottom sheet for modal ────────────── */
 @media (max-width: 480px) {
+  /* Fix #9: Reduce page padding on small screens */
+  #importKmlZones {
+    padding: 14px 16px;
+  }
+
+  /* Bottom sheet: slide from bottom, rounded top corners only */
   .ng-modal-dialog {
     top: auto;
     bottom: 0;
@@ -712,38 +763,57 @@ input[type="color"]::-webkit-color-swatch { border: none; }
     transform: none;
     width: 100%;
     border-radius: 16px 16px 0 0;
-    padding: var(--sp-5) var(--sp-4) calc(var(--sp-5) + env(safe-area-inset-bottom));
+    padding: var(--sp-5) var(--sp-4) calc(var(--sp-5) + env(safe-area-inset-bottom, 0px));
     max-height: 85vh;
+    overflow-x: hidden;
   }
 
+  /* Compact upload area on mobile */
   .dragAndDropUploader {
-    min-height: 110px;
+    min-height: 100px;
     padding: var(--sp-4);
   }
+  .kml-upload-icon svg {
+    width: 28px;
+    height: 28px;
+  }
 
+  /* Import toolbar stacks on mobile */
   .importToolbar {
     flex-direction: column;
     align-items: stretch;
+    gap: var(--sp-2);
   }
   .importToolbar .kml-btn {
     width: 100%;
     justify-content: center;
+    height: 44px; /* larger touch target */
   }
 
+  /* Options modal form items stack label above value */
   .geotabOptionsMenuElement {
     flex-direction: column;
     gap: var(--sp-2);
   }
   .geotabOptionsMenuElement label {
     width: auto;
+    padding-top: 0;
+  }
+  .geotabOptionsMenuElementValue {
+    width: 100%;
   }
 
+  /* Compact table cells */
   .checkmateListTable {
     font-size: 13px;
   }
   .checkmateListTable thead th,
-  .checkmateListTable tbody tr:first-child td,
   .checkmateListTable tbody td {
     padding: 8px var(--sp-3);
+  }
+
+  /* Toolbar wraps on mobile */
+  .kml-toolbar {
+    gap: var(--sp-2);
   }
 }
