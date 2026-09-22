@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Import KML Zones smoke test</title>
+    <link rel="stylesheet" href="../dist/__STYLES_FILE__">
+    <style>
+      html, body { margin: 0; height: 100%; overflow: hidden; }
+      #checkmateContent { position: absolute; inset: 56px 0 0 300px; overflow: hidden; }
+      #smokeResult { position: fixed; left: 0; right: 0; bottom: 0; z-index: 99999; padding: 4px 8px; background: #111; color: #0f0; font: 12px monospace; }
+    </style>
+  </head>
+  <body>
+    <div id="checkmateContent">
+      <div id="importKmlZones-app">
+        <div id="importKmlZones" class="hidden"></div>
+      </div>
+    </div>
+    <div id="smokeResult">booting</div>
+    <pre id="smokeDump" hidden></pre>
+
+    <script>
+      window.__smokeErrors = [];
+      window.addEventListener('error', (event) => window.__smokeErrors.push((event.error && event.error.stack) || event.message));
+      window.addEventListener('unhandledrejection', (event) => window.__smokeErrors.push(String(event.reason)));
+      window.geotab = { addin: {} };
+      window.__mockApi = {
+        call(method, params, success, failure) {
+          if (method === 'Get' && params.typeName === 'ZoneType') {
+            setTimeout(() => success([{ id: 'ZoneTypeCustomerId', name: 'Customer' }, { id: 'custom-route', name: 'Route' }]), 10);
+            return;
+          }
+          failure(new Error('Unmocked API call: ' + method));
+        },
+        multiCall(calls, success) {
+          setTimeout(() => success(calls.map((call, index) => 'zone-' + index)), 20);
+        }
+      };
+      window.__mockState = { getGroupFilter: () => [] };
+    </script>
+    <script src="../dist/__BUNDLE_FILE__"></script>
+    <script>
+      const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      const fixture = `<?xml version="1.0"?><kml><Document>
+        <Placemark><name>Route A</name><LineString><coordinates>116.33297,-8.65677,0 116.33305,-8.65819,0 116.334,-8.659,0</coordinates></LineString></Placemark>
+        <Placemark><name>Start</name><Point><coordinates>116.33297,-8.65677,0</coordinates></Point></Placemark>
+      </Document></kml>`;
+
+      (async () => {
+        try {
+          const lifecycle = window.geotab.addin.importKmlZones(window.__mockApi, window.__mockState, {});
+          await new Promise((resolve) => lifecycle.initialize(window.__mockApi, window.__mockState, resolve));
+          lifecycle.focus(window.__mockApi, window.__mockState);
+          await wait(400);
+
+          const dropzone = document.querySelector('.dragAndDropUploader');
+          if (!dropzone) throw new Error('Upload area did not render');
+          const transfer = new DataTransfer();
+          transfer.items.add(new File([fixture], 'Route A.kml', { type: 'application/vnd.google-earth.kml+xml' }));
+          dropzone.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: transfer }));
+          await wait(500);
+
+          const bodyText = document.body.textContent;
+          const checks = {
+            zenith: Boolean(document.querySelector('[class*="zen-"]')),
+            header: bodyText.includes('Import KML Zones'),
+            corridor: bodyText.includes('Polygon & Route Corridor Zones'),
+            points: bodyText.includes('Point Zones'),
+            route: bodyText.includes('Route A'),
+            upload: bodyText.includes('Accepts .kml'),
+            options: false,
+            imported: false
+          };
+
+          const optionsButton = Array.from(document.querySelectorAll('button')).find((button) => button.textContent.trim() === 'Options');
+          if (optionsButton) {
+            optionsButton.click();
+            await wait(150);
+            checks.options = document.body.textContent.includes('Route corridor width');
+            const close = Array.from(document.querySelectorAll('button')).find((button) => button.textContent.trim() === 'Close');
+            if (close) close.click();
+          }
+
+          const importButton = Array.from(document.querySelectorAll('button')).find((button) => button.textContent.trim() === 'Import selected zones');
+          if (importButton) {
+            importButton.click();
+            await wait(500);
+            checks.imported = document.body.textContent.includes('successfully');
+          }
+
+          window.__smokeResult = { checks, errors: window.__smokeErrors };
+          document.getElementById('smokeDump').textContent = JSON.stringify(window.__smokeResult);
+          document.getElementById('smokeResult').textContent = 'SMOKE OK';
+        } catch (error) {
+          window.__smokeErrors.push(error.message);
+          document.getElementById('smokeDump').textContent = JSON.stringify({ checks: {}, errors: window.__smokeErrors });
+          document.getElementById('smokeResult').textContent = 'BOOT FAILED: ' + error.message;
+        }
+      })();
+    </script>
+  </body>
+</html>

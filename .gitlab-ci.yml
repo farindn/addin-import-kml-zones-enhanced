@@ -2,8 +2,10 @@ pages:
   stage: deploy
   tags:
     - prod-gke-runner
-  image: alpine:latest
+  image: node:22-alpine
   script:
+    - npm ci
+    - npm run build
     - mkdir -p public
     - cp -r dist/. public/
   artifacts:
