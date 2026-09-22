@@ -8,7 +8,6 @@
     "dev": "webpack serve --config webpack.config.js --mode development",
     "test": "node --test test/*.test.js",
     "smoke": "node tools/smoke.js",
-    "smoke:late": "node tools/smoke.js --late",
     "responsive": "node tools/responsive.js",
     "package:upload": "npm run build && python build_zip.py"
   },

@@ -20,12 +20,13 @@ setTimeout(() => {
   if (!window.__importKmlZonesLifecycleStarted) {
     showBootMessage('MyGeotab did not start the Import KML Zones add-in lifecycle.');
   }
-}, 15000);
+}, 5000);
 
-let registrationTimer;
-const addinLifecycle = function addinLifecycle() {
+if (typeof geotab === 'undefined' || !geotab.addin) {
+  showBootMessage('MyGeotab did not provide the Add-In SDK host before the bundle loaded.');
+} else {
+  geotab.addin[appName] = function addinLifecycle() {
   window.__importKmlZonesLifecycleStarted = true;
-  if (registrationTimer) window.clearInterval(registrationTimer);
   const element = document.getElementById(appName);
   let reactRoot;
   let focusVersion = 0;
@@ -56,16 +57,5 @@ const addinLifecycle = function addinLifecycle() {
       // Keep the React tree mounted so an in-flight MyGeotab batch can finish.
     }
   };
-};
-
-const registerAddin = () => {
-  const host = window.geotab;
-  if (!host) return;
-  host.addin = host.addin || {};
-  host.addin[appName] = addinLifecycle;
-};
-
-registerAddin();
-window.addEventListener('DOMContentLoaded', registerAddin);
-window.addEventListener('load', registerAddin);
-registrationTimer = window.setInterval(registerAddin, 100);
+  };
+}

@@ -17,7 +17,7 @@ if (!CHROME) {
 
 const root = path.resolve(__dirname, '..');
 const smokePage = prepareSmokePage();
-const page = `file:///${smokePage.replace(/\\/g, '/')}${process.argv.includes('--late') ? '?late' : ''}`;
+const page = `file:///${smokePage.replace(/\\/g, '/')}`;
 const dumpPath = path.join(root, 'tools', 'smoke.dom.html');
 const shotPath = path.join(root, 'tools', 'smoke.png');
 const profilePath = path.join(root, 'tools', '.smoke-profile');
