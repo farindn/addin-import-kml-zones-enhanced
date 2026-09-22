@@ -11,21 +11,10 @@ bower_components/
 .claude/
 
 # Test artifacts and reference media
-tools/.smoke-profile/
-tools/.smoke-run.html
-tools/smoke.dom.html
-tools/smoke.png
-*.zip
-*.gif
-*.pptx
-create-deck.js
 *.kml
-!Route A.kml
-!app/example.kml
 *.jpg
 *.jpeg
 *.png
-!src/app/images/icon.png
 *.mp4
 *.mov
 

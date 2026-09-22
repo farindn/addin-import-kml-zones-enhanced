@@ -8,12 +8,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Import KML Zones</title>
 
-  <link rel="stylesheet" href="styles/main.css">
+  <!-- build:css styles/main.css -->
+  <link rel="stylesheet" href="styles/style.css">
+  <!-- endbuild -->
 
   <!-- No external font dependencies: icons are inline SVG below -->
 
-  <script src="scripts/vendor.js"></script>
-  <script src="scripts/main.js"></script>
+  <!-- build:js scripts/vendor.js -->
+  <!-- bower:js -->
+  <script src="/bower_components/angular/angular.js"></script>
+  <script src="/bower_components/jscolor-picker/jscolor.js"></script>
+  <script src="/bower_components/spinjs/spin.js"></script>
+  <!-- endbower -->
+  <!-- endbuild -->
+
+  <!-- build:js scripts/main.js -->
+  <script src="scripts/app.js"></script>
+  <script src="scripts/kml.js"></script>
+  <script src="scripts/vanillaSlider.js"></script>
+  <script src="scripts/utils.js"></script>
+  <script src="scripts/colorPicker.js"></script>
+  <script src="scripts/uploader.js"></script>
+  <script src="scripts/waiting.js"></script>
+  <!-- endbuild -->
+
 </head>
 
 <body>
@@ -22,6 +40,7 @@
 
     <!-- Disclaimer banner -->
     <div id="disclaimer">
+      <!-- Fix #2: Inline SVG — avoids Google Fonts CSP issues in MyGeotab iframe -->
       <svg class="kml-disclaimer-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
       </svg>
@@ -58,6 +77,7 @@
               </select>
             </div>
           </li>
+          <!-- Fix #6: removed style="height: 90px;" — transparency slider would overflow into next section when visible -->
           <li class="geotabOptionsMenuElement">
             <label>Color</label>
             <div class="geotabOptionsMenuElementValue">
@@ -119,18 +139,22 @@
     <div id="imporKMLZonesFormContainer" class="extern" ng-controller="parsedDataController">
 
       <!--
-        IMPORTANT: .dragAndDropUploader is required by uploader.js
+        IMPORTANT: .dragAndDropUploader class is required by uploader.js
         (getElementsByClassName("dragAndDropUploader")[0]) — do not remove it.
+        .uploaderElementsContainer is also referenced in other parts.
+        Visual styling comes from CSS targeting .dragAndDropUploader.
       -->
       <div class="dragAndDropUploader uploaderElementsContainer">
+        <!-- Fix #2: Inline SVG cloud-upload icon — no external font required -->
         <svg class="kml-upload-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="36" height="36" fill="currentColor" aria-hidden="true">
           <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
         </svg>
         <span class="dragAndDropTitle">{{uploaderTitle}}</span>
         <span class="kml-upload-hint">Accepts .kml from Google My Maps — including route (LineString) exports</span>
         <!--
-          Must be the first <input> inside the upload box.
-          uploader.js: dragAndDropArea.getElementsByTagName("input")[0]
+          This input MUST be the first <input> child of the upload box.
+          uploader.js uses dragAndDropArea.getElementsByTagName("input")[0]
+          to get a reference and calls inputFile.click() on box click.
         -->
         <input class="uploadFileElement" type="file" multiple="true"
                ng-model="upload"
@@ -138,16 +162,16 @@
                onclick="this.value = null;">
       </div>
 
-      <!-- Error message -->
+      <!-- Error message (shown/hidden by JS) -->
       <div class="errorMessage" id="errorMessage" style="display: none;"></div>
 
       <div>
-        <!-- Progress bar -->
+        <!-- Progress bar (shown during import) -->
         <div id="progressContainer" style="display: none;">
           <progress max="100" value="0" id="importProgress"></progress>
         </div>
 
-        <!-- Import toolbar -->
+        <!-- Import toolbar (right-aligned, shown after file upload) -->
         <div class="importToolbar">
           <button class="kml-btn kml-btn--text" ng-click="exportKML()"
                   id="exportKML" style="display: none;">Save not imported zones to KML</button>
@@ -162,7 +186,8 @@
         </div>
 
         <!--
-          IMPORTANT: .checkmateListTable is used by kml.js
+          Polygon / Route Corridor Zones table.
+          IMPORTANT: .checkmateListTable is used by kml.js:
           querySelectorAll(".checkmateListTable .error") — do not remove.
         -->
         <div id="polygonList" style="display: none;">
@@ -180,6 +205,10 @@
           </table>
         </div>
 
+        <!--
+          Point Zones table.
+          IMPORTANT: .checkmateListTable must stay (same kml.js selector).
+        -->
         <div id="pointList" style="display: none;">
           <table class="checkmateListTable">
             <thead>
