@@ -64,7 +64,7 @@ module.exports = (env, argv) => {
         filename: `${appName}.html`,
         template: path.resolve(__dirname, 'src/app/importKmlZones.html'),
         inject: 'body',
-        scriptLoading: 'defer'
+        scriptLoading: 'blocking'
       }),
       new CopyWebpackPlugin({
         patterns: [

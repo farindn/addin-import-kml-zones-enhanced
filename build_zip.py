@@ -27,7 +27,7 @@ ADDIN_FOLDER = "importKmlZones"
 
 
 def patch_html(html: str) -> str:
-    """Keep the ZIP HTML paths flat like the SampleAddins layout."""
+    """Keep the ZIP HTML paths flat like the known-working add-in layout."""
     html = re.sub(r'href="styles/main\.css"', 'href="styles.css"', html)
     html = re.sub(r'src="scripts/main\.js"', 'src="bundle.js"', html)
     return html

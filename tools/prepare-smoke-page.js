@@ -15,8 +15,8 @@ const prepareSmokePage = () => {
   if (!productionHtml.includes(bundle) || !productionHtml.includes(styles)) {
     throw new Error('Generated production HTML does not reference its emitted assets.');
   }
-  if (!new RegExp(`<script defer src=${bundle.replace('.', '\\.')}`).test(productionHtml)) {
-    throw new Error('Generated production HTML does not defer the Add-In bundle.');
+  if (!new RegExp(`<script(?: defer)? src=${bundle.replace('.', '\\.')}`).test(productionHtml)) {
+    throw new Error('Generated production HTML does not reference the Add-In bundle.');
   }
   if (!productionHtml.includes('importKmlZones-app') || !productionHtml.includes('importKmlZones')) {
     throw new Error('Generated production HTML is missing the MyGeotab mount structure.');
